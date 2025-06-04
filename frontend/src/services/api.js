@@ -16,11 +16,15 @@ const api = axios.create({
 // Add token to requests if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  console.log('Token from localStorage:', token ? 'Present' : 'Not found');
-  
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-    console.log('Setting Authorization header:', `Bearer ${token}`);
+  } else {
+    // Only log "Token not found" for authenticated routes
+    const authRequiredPaths = ['/tasks', '/auth/profile', '/auth/stats'];
+    if (authRequiredPaths.some(path => config.url.includes(path))) {
+      console.log('Token required for authenticated route:', config.url);
+      window.location.href = '/login';
+    }
   }
   return config;
 }, (error) => {
@@ -33,7 +37,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.log('401 error detected, clearing auth data');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
