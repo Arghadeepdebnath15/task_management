@@ -1,9 +1,12 @@
 import axios from 'axios';
 
 // Get the API URL from environment variables, fallback to localhost for development
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.PROD 
+  ? 'https://task-management-0dpa.onrender.com/api'
+  : 'http://localhost:5000/api';
 
-console.log('API URL:', API_URL); // For debugging
+console.log('Environment:', import.meta.env.PROD ? 'production' : 'development');
+console.log('API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
