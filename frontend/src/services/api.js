@@ -1,99 +1,117 @@
 import axios from 'axios';
 
-// Get the API URL from environment variables, fallback to localhost for development
-const API_URL = import.meta.env.PROD 
-  ? 'https://task-management-0dpa.onrender.com/api'
-  : 'http://localhost:5000/api';
+// API URL configuration
+const RENDER_URL = 'https://task-management-0dpa.onrender.com';
+const LOCAL_URL = 'http://localhost:5000';
+
+const API_URL = import.meta.env.PROD ? RENDER_URL : LOCAL_URL;
 
 console.log('Environment:', import.meta.env.PROD ? 'production' : 'development');
-console.log('API URL:', API_URL);
+console.log('Base API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true // Enable sending cookies in cross-origin requests
+  withCredentials: true,
+  timeout: 10000, // 10 second timeout
 });
 
-// Add token to requests if available
+// Request interceptor
 api.interceptors.request.use((config) => {
+  // Log the full request URL
+  console.log('Making request to:', `${config.baseURL}${config.url}`);
+  
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    // Only log "Token not found" for authenticated routes
-    const authRequiredPaths = ['/tasks', '/auth/profile', '/auth/stats'];
-    if (authRequiredPaths.some(path => config.url.includes(path))) {
-      console.log('Token required for authenticated route:', config.url);
-      window.location.href = '/login';
-    }
   }
   return config;
 }, (error) => {
-  console.error('Request interceptor error:', error);
+  console.error('Request error:', error);
   return Promise.reject(error);
 });
 
-// Add response interceptor to handle 401 errors
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response received:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 401) {
+    console.error('Response error:', {
+      url: error.config?.url,
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+
+    if (error.code === 'ECONNABORTED') {
+      throw new Error('Request timeout - server took too long to respond');
+    }
+
+    if (!error.response) {
+      throw new Error('Network error - cannot connect to server');
+    }
+
+    if (error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
-    return Promise.reject(error);
+
+    throw error;
   }
 );
 
 export const auth = {
   register: async (formData) => {
     try {
-      console.log('Making registration request to:', `${API_URL}/auth/register`);
-      const response = await api.post('/auth/register', formData, {
+      console.log('Starting registration process...');
+      const response = await api.post('/api/auth/register', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 15000 // 15 seconds for registration
       });
-      console.log('Registration response:', response.data);
-      
-      // Store token immediately after successful registration
+
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
       }
-      
+
       return response.data;
     } catch (error) {
-      console.error('Registration request failed:', {
-        url: `${API_URL}/auth/register`,
-        error: error.message,
-        response: error.response?.data
+      console.error('Registration failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
       });
       throw error;
     }
   },
-  
+
   login: async (credentials) => {
     try {
-      console.log('Making login request to:', `${API_URL}/auth/login`);
-      const response = await api.post('/auth/login', credentials);
-      console.log('Login response:', response.data);
-      
-      // Store token immediately after successful login
+      console.log('Starting login process...');
+      const response = await api.post('/api/auth/login', credentials);
+
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
       }
-      
+
       return response.data;
     } catch (error) {
-      console.error('Login request failed:', {
-        url: `${API_URL}/auth/login`,
-        error: error.message,
-        response: error.response?.data
+      console.error('Login failed:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
       });
       throw error;
     }
