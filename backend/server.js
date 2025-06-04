@@ -70,6 +70,32 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
+// Root API route
+app.get('/api', (req, res) => {
+  res.json({
+    message: 'Task Management API',
+    endpoints: {
+      auth: {
+        login: '/api/auth/login',
+        register: '/api/auth/register',
+        profile: '/api/auth/profile',
+        stats: '/api/auth/stats'
+      },
+      tasks: {
+        list: '/api/tasks',
+        create: '/api/tasks',
+        update: '/api/tasks/:id',
+        delete: '/api/tasks/:id'
+      }
+    }
+  });
+});
+
+// Handle 404 errors
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
