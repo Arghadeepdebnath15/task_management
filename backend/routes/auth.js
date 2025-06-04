@@ -13,11 +13,24 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Register new user
 router.post('/register', upload.single('profilePicture'), async (req, res) => {
   try {
+    console.log('Registration attempt:', { 
+      username: req.body.username,
+      email: req.body.email,
+      hasPassword: !!req.body.password,
+      hasFile: !!req.file
+    });
+
     const { username, email, password } = req.body;
     
+    if (!username || !email || !password) {
+      console.log('Missing required fields:', { username: !!username, email: !!email, password: !!password });
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
+      console.log('User already exists:', { email, username });
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -46,10 +59,11 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
     });
 
     await user.save();
+    console.log('User created successfully:', { id: user._id, username: user.username, email: user.email });
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -63,6 +77,7 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
 });
@@ -70,21 +85,35 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
+    console.log('Login attempt:', { 
+      email: req.body.email,
+      hasPassword: !!req.body.password 
+    });
+
     const { email, password } = req.body;
+
+    if (!email || !password) {
+      console.log('Missing login credentials:', { email: !!email, password: !!password });
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', { email });
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      console.log('Invalid password for user:', { email });
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    console.log('Login successful:', { id: user._id, username: user.username, email: user.email });
+
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -98,6 +127,7 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });

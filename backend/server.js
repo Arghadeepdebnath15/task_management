@@ -70,6 +70,17 @@ mongoose.connect(MONGODB_URI)
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    environment: process.env.NODE_ENV,
+    mongodbConnected: mongoose.connection.readyState === 1,
+    hasJwtSecret: !!process.env.JWT_SECRET,
+    time: new Date().toISOString()
+  });
+});
+
 // Root API route
 app.get('/api', (req, res) => {
   res.json({
