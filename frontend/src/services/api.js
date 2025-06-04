@@ -4,10 +4,13 @@ import axios from 'axios';
 const RENDER_URL = 'https://task-management-0dpa.onrender.com';
 const LOCAL_URL = 'http://localhost:5000';
 
-const API_URL = import.meta.env.PROD ? RENDER_URL : LOCAL_URL;
+// Force production URL when deployed to Netlify
+const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+const API_URL = isProduction ? RENDER_URL : LOCAL_URL;
 
-console.log('Environment:', import.meta.env.PROD ? 'production' : 'development');
+console.log('Environment:', isProduction ? 'production' : 'development');
 console.log('Base API URL:', API_URL);
+console.log('Hostname:', window.location.hostname);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -20,6 +23,10 @@ const api = axios.create({
 
 // Request interceptor
 api.interceptors.request.use((config) => {
+  // Ensure API paths are correct
+  const path = config.url.startsWith('/api/') ? config.url : `/api${config.url}`;
+  config.url = path;
+  
   // Log the full request URL
   console.log('Making request to:', `${config.baseURL}${config.url}`);
   
@@ -134,32 +141,55 @@ export const auth = {
 
 export const tasks = {
   create: async (taskData) => {
-    const response = await api.post('/tasks', taskData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      console.log('Creating new task...');
+      const response = await api.post('/api/tasks', taskData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to create task:', error);
+      throw error;
+    }
   },
 
   getAll: async () => {
-    const response = await api.get('/tasks');
-    return response.data;
+    try {
+      console.log('Fetching all tasks...');
+      const response = await api.get('/api/tasks');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error);
+      throw error;
+    }
   },
 
   update: async (id, taskData) => {
-    // If taskData is FormData (contains files), use multipart/form-data
-    const headers = taskData instanceof FormData
-      ? { 'Content-Type': 'multipart/form-data' }
-      : { 'Content-Type': 'application/json' };
+    try {
+      console.log('Updating task:', id);
+      const headers = taskData instanceof FormData
+        ? { 'Content-Type': 'multipart/form-data' }
+        : { 'Content-Type': 'application/json' };
 
-    const response = await api.patch(`/tasks/${id}`, taskData, { headers });
-    return response.data;
+      const response = await api.patch(`/api/tasks/${id}`, taskData, { headers });
+      return response.data;
+    } catch (error) {
+      console.error('Failed to update task:', error);
+      throw error;
+    }
   },
 
   delete: async (id) => {
-    const response = await api.delete(`/tasks/${id}`);
-    return response.data;
+    try {
+      console.log('Deleting task:', id);
+      const response = await api.delete(`/api/tasks/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      throw error;
+    }
   },
 };
 
