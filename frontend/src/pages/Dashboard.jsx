@@ -72,7 +72,6 @@ import {
   Comment as CommentIcon,
   PictureAsPdf as PictureAsPdfIcon,
   Download as DownloadIcon,
-  Image as ImageIcon,
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -130,7 +129,6 @@ const Dashboard = () => {
   const [convertedPdfUrl, setConvertedPdfUrl] = useState(null);
   const imagePreviewRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isConverting, setIsConverting] = useState(false);
 
   const defaultLabels = [
     { id: 'work', name: 'Work', color: '#4CAF50' },
@@ -610,24 +608,19 @@ const Dashboard = () => {
     });
   };
 
-  const handleRemoveImage = (index) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleConvertToPDF = async () => {
+  const convertToPdf = async () => {
     if (selectedImages.length === 0) {
       toast.error('Please select at least one image');
       return;
     }
 
-    setIsConverting(true);
+    const pdf = new jsPDF({
+      unit: 'px',
+      format: 'a4',
+      compress: false
+    });
+    
     try {
-      const pdf = new jsPDF({
-        unit: 'px',
-        format: 'a4',
-        compress: false
-      });
-      
       for (let i = 0; i < selectedImages.length; i++) {
         if (i > 0) {
           pdf.addPage();
@@ -683,8 +676,6 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Error converting to PDF:', error);
       toast.error('Error creating PDF');
-    } finally {
-      setIsConverting(false);
     }
   };
 
@@ -740,102 +731,7 @@ const Dashboard = () => {
   };
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: (theme) => `linear-gradient(135deg, 
-          ${alpha(theme.palette.primary.main, 0.05)} 0%, 
-          ${alpha(theme.palette.secondary.main, 0.05)} 100%
-        )`,
-        p: { xs: 2, sm: 3, md: 4 },
-        transition: 'all 0.3s ease-in-out'
-      }}
-    >
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          mb: 4,
-          gap: 2,
-          flexWrap: 'wrap',
-          background: (theme) => alpha(theme.palette.background.paper, 0.8),
-          backdropFilter: 'blur(8px)',
-          borderRadius: 2,
-          p: 2,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-        }}
-      >
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center',
-          gap: 2,
-        }}>
-          <Avatar
-            src={user?.profilePicture?.url}
-            sx={{ 
-              width: 48, 
-              height: 48,
-              cursor: 'pointer',
-              border: '2px solid',
-              borderColor: 'primary.main',
-              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-              '&:hover': {
-                transform: 'scale(1.05) rotate(5deg)',
-                transition: 'all 0.2s ease-in-out',
-              }
-            }}
-            onClick={() => navigate('/profile')}
-          />
-          <Box>
-            <Typography variant="h5" sx={{ 
-              fontWeight: 700,
-              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 0.5
-            }}>
-              Task Dashboard
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {format(new Date(), 'EEEE, MMMM d, yyyy')}
-            </Typography>
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => loadTasks()}
-            startIcon={<RefreshIcon />}
-            sx={{
-              borderRadius: 2,
-              '&:hover': {
-                transform: 'rotate(180deg)',
-                transition: 'transform 0.3s ease-in-out'
-              }
-            }}
-          >
-            Refresh
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => setOpenDialog(true)}
-            sx={{
-              background: (theme) => `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-              borderRadius: 2,
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.2)'
-              }
-            }}
-          >
-            Add Task
-          </Button>
-        </Box>
-      </Box>
-
+    <Box sx={{ p: 3 }}>
       {/* Quick Add Task */}
       <Collapse in={showQuickAdd}>
         <Box sx={{ 
@@ -869,6 +765,116 @@ const Dashboard = () => {
         </Box>
       </Collapse>
 
+      {/* Header */}
+      <Box
+        sx={{
+          p: 2,
+          background: 'white',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          width: '100%',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, gap: 2 }}>
+          <Box
+            sx={{
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                border: '2px solid',
+                borderColor: 'primary.main',
+                borderRadius: '50%',
+                animation: 'pulse 2s infinite',
+              },
+              '@keyframes pulse': {
+                '0%': {
+                  transform: 'scale(1)',
+                  opacity: 0.5,
+                },
+                '70%': {
+                  transform: 'scale(1.2)',
+                  opacity: 0,
+                },
+                '100%': {
+                  transform: 'scale(1.2)',
+                  opacity: 0,
+                },
+              },
+            }}
+          >
+            <Avatar
+              src={user?.profilePicture?.url}
+              sx={{ 
+                width: 40, 
+                height: 40,
+                cursor: 'pointer',
+                border: '2px solid',
+                borderColor: 'primary.main',
+                '&:hover': {
+                  opacity: 0.8,
+                  transform: 'scale(1.05)',
+                  transition: 'all 0.2s ease-in-out',
+                }
+              }}
+              onClick={() => navigate('/profile')}
+            />
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Task Dashboard
+          </Typography>
+        </Box>
+
+        <Stack direction="row" spacing={2} alignItems="center">
+            <TextField
+              size="small"
+              placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              }}
+              sx={{ width: 250 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={handleFilterClick}
+              startIcon={<FilterListIcon />}
+            >
+              {selectedFilter === 'all' ? 'All Tasks' : selectedFilter}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => setShowQuickAdd(true)}
+              startIcon={<AddIcon />}
+              color="primary"
+            >
+              Quick Add
+            </Button>
+            <IconButton onClick={logout} color="inherit">
+              <LogoutIcon />
+            </IconButton>
+        </Stack>
+
+        <Menu
+          anchorEl={filterAnchorEl}
+          open={Boolean(filterAnchorEl)}
+          onClose={() => handleFilterClose()}
+        >
+          <MenuItem onClick={() => handleFilterClose('all')}>All Tasks</MenuItem>
+          <MenuItem onClick={() => handleFilterClose('today')}>Due Today</MenuItem>
+          <MenuItem onClick={() => handleFilterClose('pending')}>Pending</MenuItem>
+          <MenuItem onClick={() => handleFilterClose('in-progress')}>In Progress</MenuItem>
+          <MenuItem onClick={() => handleFilterClose('completed')}>Completed</MenuItem>
+        </Menu>
+          </Box>
+
       {/* Main Content */}
       <Box sx={{ 
         flex: 1,
@@ -887,11 +893,10 @@ const Dashboard = () => {
             {/* Add the PDF Converter Section before the task sections */}
             <Box sx={{ mb: 4 }}>
               <Card sx={{ 
-                background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                mb: 4, 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 position: 'relative',
                 overflow: 'hidden',
-                borderRadius: 4,
-                boxShadow: '0 20px 40px rgba(79, 70, 229, 0.3)',
                 '&::before': {
                   content: '""',
                   position: 'absolute',
@@ -899,13 +904,14 @@ const Dashboard = () => {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  background: 'radial-gradient(circle at top right, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 60%)',
-                  opacity: 0.6,
+                  background: 'url("data:image/svg+xml,%3Csvg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5z-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z" fill="%23ffffff" fill-opacity="0.05" fill-rule="evenodd"/%3E%3C/svg%3E")',
+                  backgroundSize: '24px 24px',
+                  opacity: 0.1,
                 }
               }}>
                 <Box 
                   sx={{ 
-                    p: 4,
+                    p: 3, 
                     position: 'relative',
                     ...(isDragging && {
                       '&::after': {
@@ -915,9 +921,9 @@ const Dashboard = () => {
                         left: 0,
                         right: 0,
                         bottom: 0,
-                        background: 'rgba(255, 255, 255, 0.1)',
+                        background: 'rgba(255, 255, 255, 0.15)',
                         border: '3px dashed rgba(255, 255, 255, 0.3)',
-                        borderRadius: 4,
+                        borderRadius: 2,
                         zIndex: 1,
                         display: 'flex',
                         alignItems: 'center',
@@ -931,25 +937,34 @@ const Dashboard = () => {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <Grid container spacing={4} alignItems="center">
+                  {isDragging && (
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 2,
+                        textAlign: 'center',
+                        color: 'white',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <Typography variant="h5" sx={{ fontWeight: 600, mb: 1 }}>
+                        Drop images here
+                      </Typography>
+                      <Typography variant="body1" sx={{ opacity: 0.8 }}>
+                        Release to add images to the converter
+                      </Typography>
+                    </Box>
+                  )}
+                  <Grid container spacing={3} alignItems="center" sx={{ position: 'relative', zIndex: isDragging ? 0 : 1 }}>
                     <Grid item xs={12} md={6}>
-                      <Box>
-                        <Typography variant="h4" sx={{ 
-                          color: 'white', 
-                          mb: 2, 
-                          fontWeight: 700,
-                          textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                          letterSpacing: '-0.5px'
-                        }}>
+                      <Box sx={{ mb: { xs: 3, md: 0 } }}>
+                        <Typography variant="h5" sx={{ color: 'white', mb: 1, fontWeight: 600 }}>
                           Image to PDF Converter
                         </Typography>
-                        <Typography variant="h6" sx={{ 
-                          color: 'rgba(255, 255, 255, 0.9)', 
-                          mb: 4,
-                          fontWeight: 400,
-                          lineHeight: 1.6,
-                          textShadow: '0 1px 2px rgba(0,0,0,0.1)'
-                        }}>
+                        <Typography variant="body1" sx={{ color: 'rgba(255, 255, 255, 0.8)', mb: 3 }}>
                           Convert your images into professional PDF documents in seconds
                         </Typography>
                         <input
@@ -966,19 +981,15 @@ const Dashboard = () => {
                             component="span"
                             startIcon={<AttachFileIcon />}
                             sx={{
-                              bgcolor: 'rgba(255, 255, 255, 0.95)',
-                              color: '#4f46e5',
-                              px: 4,
-                              py: 1.5,
-                              fontSize: '1rem',
-                              fontWeight: 600,
-                              borderRadius: 3,
+                              bgcolor: 'rgba(255, 255, 255, 0.9)',
+                              color: '#764ba2',
                               '&:hover': {
                                 bgcolor: 'white',
                                 transform: 'translateY(-2px)',
                                 boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
                               },
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                              transition: 'all 0.3s ease',
+                              fontWeight: 600
                             }}
                           >
                             Select Images
@@ -990,28 +1001,20 @@ const Dashboard = () => {
                       {selectedImages.length > 0 ? (
                         <Box sx={{ 
                           bgcolor: 'rgba(255, 255, 255, 0.1)', 
-                          borderRadius: 3,
-                          p: 3,
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)'
+                          borderRadius: 2,
+                          p: 2,
+                          backdropFilter: 'blur(10px)'
                         }}>
-                          <Typography variant="subtitle1" sx={{ 
-                            color: 'white', 
-                            mb: 2,
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1
-                          }}>
-                            <ImageIcon /> Selected Images: {selectedImages.length}
+                          <Typography variant="subtitle2" sx={{ color: 'white', mb: 2 }}>
+                            Selected Images: {selectedImages.length}
                           </Typography>
                           <Box 
                             ref={imagePreviewRef}
                             sx={{ 
                               display: 'flex', 
                               flexWrap: 'wrap', 
-                              gap: 1.5,
-                              mb: 3,
+                              gap: 1,
+                              mb: 2,
                               maxHeight: '200px',
                               overflowY: 'auto',
                               '&::-webkit-scrollbar': {
@@ -1025,122 +1028,122 @@ const Dashboard = () => {
                                 background: 'rgba(255, 255, 255, 0.3)',
                                 borderRadius: '4px',
                                 '&:hover': {
-                                  background: 'rgba(255, 255, 255, 0.4)',
+                                  background: 'rgba(255, 255, 255, 0.5)',
                                 }
                               }
                             }}
                           >
-                            {selectedImages.map((image, index) => (
+                            {selectedImages.map((img, index) => (
                               <Box
                                 key={index}
                                 sx={{
-                                  position: 'relative',
                                   width: 80,
                                   height: 80,
+                                  position: 'relative',
                                   borderRadius: 2,
                                   overflow: 'hidden',
-                                  boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                                  transition: 'all 0.3s ease',
+                                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                  transition: 'transform 0.3s ease',
                                   '&:hover': {
-                                    transform: 'scale(1.05)',
-                                    '& .image-overlay': {
-                                      opacity: 1,
-                                    }
+                                    transform: 'scale(1.05)'
                                   }
                                 }}
                               >
                                 <img
-                                  src={URL.createObjectURL(image)}
-                                  alt={`Selected ${index + 1}`}
+                                  src={img.preview}
+                                  alt={`Preview ${index + 1}`}
                                   style={{
                                     width: '100%',
                                     height: '100%',
                                     objectFit: 'cover'
                                   }}
                                 />
-                                <Box
-                                  className="image-overlay"
-                                  sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    bottom: 0,
-                                    bgcolor: 'rgba(0,0,0,0.5)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    opacity: 0,
-                                    transition: 'opacity 0.2s ease'
-                                  }}
-                                >
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleRemoveImage(index)}
-                                    sx={{
-                                      color: 'white',
-                                      '&:hover': {
-                                        bgcolor: 'rgba(255,255,255,0.2)'
-                                      }
-                                    }}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Box>
                               </Box>
                             ))}
                           </Box>
-                          <Button
-                            variant="contained"
-                            onClick={handleConvertToPDF}
-                            disabled={isConverting}
-                            startIcon={isConverting ? <CircularProgress size={20} /> : <PictureAsPdfIcon />}
-                            sx={{
-                              bgcolor: 'white',
-                              color: '#4f46e5',
-                              px: 4,
-                              py: 1.5,
-                              fontSize: '1rem',
-                              fontWeight: 600,
-                              width: '100%',
-                              borderRadius: 3,
-                              '&:hover': {
-                                bgcolor: 'rgba(255,255,255,0.9)',
-                                transform: 'translateY(-2px)',
-                                boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
-                              },
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                              '&.Mui-disabled': {
-                                bgcolor: 'rgba(255,255,255,0.7)',
-                                color: 'rgba(79, 70, 229, 0.5)'
-                              }
-                            }}
-                          >
-                            {isConverting ? 'Converting...' : 'Convert to PDF'}
-                          </Button>
+                          <Stack direction="row" spacing={2}>
+                            <Button
+                              variant="contained"
+                              onClick={convertToPdf}
+                              startIcon={<PictureAsPdfIcon />}
+                              sx={{
+                                bgcolor: 'success.main',
+                                '&:hover': {
+                                  bgcolor: 'success.dark',
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+                                },
+                                transition: 'all 0.3s ease'
+                              }}
+                            >
+                              Convert to PDF
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              onClick={handleClearImages}
+                              startIcon={<DeleteIcon />}
+                              sx={{
+                                color: 'white',
+                                borderColor: 'rgba(255, 255, 255, 0.5)',
+                                '&:hover': {
+                                  borderColor: 'white',
+                                  bgcolor: 'rgba(255, 255, 255, 0.1)'
+                                }
+                              }}
+                            >
+                              Clear
+                            </Button>
+                          </Stack>
                         </Box>
                       ) : (
                         <Box sx={{ 
-                          height: '100%',
-                          minHeight: 200,
-                          display: 'flex',
-                          alignItems: 'center',
+                          height: '100%', 
+                          display: 'flex', 
+                          alignItems: 'center', 
                           justifyContent: 'center',
-                          border: '2px dashed rgba(255,255,255,0.3)',
-                          borderRadius: 3,
-                          p: 3,
-                          textAlign: 'center'
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          textAlign: 'center',
+                          p: 3
                         }}>
-                          <Typography variant="h6" sx={{ 
-                            color: 'rgba(255,255,255,0.7)',
-                            fontWeight: 500
-                          }}>
-                            Drag and drop your images here or click "Select Images"
-                          </Typography>
+                          <Box>
+                            <PictureAsPdfIcon sx={{ fontSize: 48, mb: 2, opacity: 0.7 }} />
+                            <Typography variant="body1">
+                              Select images to convert them into a PDF document
+                            </Typography>
+                          </Box>
                         </Box>
                       )}
                     </Grid>
                   </Grid>
+                  
+                  {convertedPdfUrl && (
+                    <Box sx={{ 
+                      mt: 3, 
+                      pt: 3, 
+                      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                      display: 'flex',
+                      justifyContent: 'center'
+                    }}>
+                      <Button
+                        variant="contained"
+                        onClick={handleDownloadPdf}
+                        startIcon={<DownloadIcon />}
+                        sx={{
+                          bgcolor: 'white',
+                          color: '#764ba2',
+                          '&:hover': {
+                            bgcolor: 'white',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 20px rgba(0,0,0,0.2)'
+                          },
+                          transition: 'all 0.3s ease',
+                          fontWeight: 600
+                        }}
+                      >
+                        Download PDF
+                      </Button>
+                    </Box>
+                  )}
                 </Box>
               </Card>
             </Box>
@@ -1226,15 +1229,30 @@ const Dashboard = () => {
                             flexDirection: 'column',
                             position: 'relative',
                             transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                            borderRadius: '16px',
+                            borderRadius: '24px',
                             overflow: 'visible',
                             background: (theme) => `linear-gradient(135deg, 
-                              ${alpha(theme.palette.background.paper, 0.9)},
-                              ${alpha(theme.palette.background.paper, 0.7)}
+                              ${task.status === 'completed'
+                                ? `${alpha(theme.palette.success.light, 0.05)}, ${alpha(theme.palette.success.main, 0.1)}`
+                                : task.priority === 'high'
+                                ? `${alpha(theme.palette.error.light, 0.05)}, ${alpha(theme.palette.error.main, 0.1)}`
+                                : task.priority === 'medium'
+                                ? `${alpha(theme.palette.warning.light, 0.05)}, ${alpha(theme.palette.warning.main, 0.1)}`
+                                : `${alpha(theme.palette.success.light, 0.05)}, ${alpha(theme.palette.success.main, 0.1)}`
+                              }
                             )`,
                             backdropFilter: 'blur(10px)',
                             border: '1px solid',
-                            borderColor: (theme) => alpha(theme.palette.divider, 0.1),
+                            borderColor: (theme) => `${alpha(
+                              task.status === 'completed'
+                                ? theme.palette.success.main
+                                : task.priority === 'high'
+                                ? theme.palette.error.main
+                                : task.priority === 'medium'
+                                ? theme.palette.warning.main
+                                : theme.palette.success.main,
+                              0.1
+                            )}`,
                             boxShadow: (theme) => `
                               0 4px 20px ${alpha(
                                 task.priority === 'high'
@@ -1255,15 +1273,15 @@ const Dashboard = () => {
                               height: '30%',
                               background: (theme) => `linear-gradient(135deg,
                                 ${task.status === 'completed'
-                                  ? `${alpha(theme.palette.success.light, 0.1)}, ${alpha(theme.palette.success.main, 0.05)}`
+                                  ? `${alpha(theme.palette.success.light, 0.2)}, ${alpha(theme.palette.success.main, 0.1)}`
                                   : task.priority === 'high'
-                                  ? `${alpha(theme.palette.error.light, 0.1)}, ${alpha(theme.palette.error.main, 0.05)}`
-                                  : task.priority === 'medium'
-                                  ? `${alpha(theme.palette.warning.light, 0.1)}, ${alpha(theme.palette.warning.main, 0.05)}`
-                                  : `${alpha(theme.palette.success.light, 0.1)}, ${alpha(theme.palette.success.main, 0.05)}`
+                                  ? `${alpha(theme.palette.error.light, 0.2)}, ${alpha(theme.palette.error.main, 0.1)}`
+                                    : task.priority === 'medium'
+                                  ? `${alpha(theme.palette.warning.light, 0.2)}, ${alpha(theme.palette.warning.main, 0.1)}`
+                                  : `${alpha(theme.palette.success.light, 0.2)}, ${alpha(theme.palette.success.main, 0.1)}`
                                 }
                               )`,
-                              borderRadius: '16px 16px 0 0',
+                              borderRadius: '24px 24px 0 0',
                               opacity: 0.8,
                               zIndex: 0
                             },
@@ -1281,13 +1299,51 @@ const Dashboard = () => {
                                 inset 0 2px 8px ${alpha(theme.palette.common.white, 0.2)}
                               `,
                               '& .priority-indicator': {
-                                width: '8px',
-                                opacity: 1
+                                transform: 'scaleY(1.1) translateX(2px)',
+                                boxShadow: (theme) => `4px 0 12px ${alpha(
+                                  task.priority === 'high'
+                                    ? theme.palette.error.main
+                                    : task.priority === 'medium'
+                                    ? theme.palette.warning.main
+                                    : theme.palette.success.main,
+                                  0.4
+                                )}`,
                               },
-                              '& .task-actions': {
-                                opacity: 1,
-                                transform: 'translateY(0)',
+                              '& .task-title': {
+                                background: (theme) => `linear-gradient(to right,
+                                  ${theme.palette.text.primary},
+                                  ${alpha(
+                                    task.priority === 'high'
+                                      ? theme.palette.error.main
+                                      : task.priority === 'medium'
+                                      ? theme.palette.warning.main
+                                      : theme.palette.success.main,
+                                    0.8
+                                  )}
+                                )`,
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent',
                               }
+                            },
+                            '& .priority-indicator': {
+                              content: '""',
+                              position: 'absolute',
+                              left: 0,
+                              top: 0,
+                              height: '100%',
+                              width: '6px',
+                              background: (theme) => `linear-gradient(to bottom, 
+                                ${task.priority === 'high'
+                                  ? `${theme.palette.error.light}, ${theme.palette.error.main}, ${theme.palette.error.dark}`
+                                  : task.priority === 'medium'
+                                  ? `${theme.palette.warning.light}, ${theme.palette.warning.main}, ${theme.palette.warning.dark}`
+                                  : `${theme.palette.success.light}, ${theme.palette.success.main}, ${theme.palette.success.dark}`
+                                }
+                              )`,
+                              borderRadius: '24px 0 0 24px',
+                              opacity: 0.8,
+                              transition: 'all 0.4s ease',
+                              zIndex: 1
                             }
                           }}
                         >
@@ -1298,7 +1354,7 @@ const Dashboard = () => {
                               left: 0,
                               top: 0,
                               height: '100%',
-                              width: '4px',
+                              width: '6px',
                               background: (theme) => `linear-gradient(to bottom, 
                                 ${task.priority === 'high'
                                   ? `${theme.palette.error.light}, ${theme.palette.error.main}, ${theme.palette.error.dark}`
@@ -1307,112 +1363,431 @@ const Dashboard = () => {
                                   : `${theme.palette.success.light}, ${theme.palette.success.main}, ${theme.palette.success.dark}`
                                 }
                               )`,
-                              borderRadius: '16px 0 0 16px',
-                              opacity: 0.6,
-                              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                              borderRadius: '24px 0 0 24px',
+                              opacity: 0.8,
+                              transition: 'all 0.4s ease',
                               zIndex: 1
                             }}
                           />
 
                           <CardContent sx={{ 
-                            p: 3,
-                            pb: 1,
-                            position: 'relative',
+                            p: 3, 
+                            pb: 1, 
+                            position: 'relative', 
                             zIndex: 1,
-                            height: '100%',
-                            display: 'flex',
-                            flexDirection: 'column'
+                            '&:last-child': { pb: 1 }
                           }}>
-                            <Box sx={{ mb: 2 }}>
-                              <Typography 
-                                variant="h6" 
-                                className="task-title"
-                                sx={{ 
-                                  fontWeight: 600,
-                                  mb: 1,
-                                  transition: 'all 0.3s ease',
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    color: 'primary.main'
-                                  }
-                                }}
-                                onClick={() => handleTaskClick(task)}
-                              >
-                                {task.title}
-                              </Typography>
-                              <Typography 
-                                variant="body2" 
-                                color="text.secondary"
+                            {/* Status indicator dot */}
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 16,
+                                right: 16,
+                                width: 12,
+                                height: 12,
+                                borderRadius: '50%',
+                                background: (theme) => task.status === 'completed'
+                                  ? theme.palette.success.main
+                                  : task.status === 'in-progress'
+                                  ? theme.palette.info.main
+                                  : theme.palette.warning.main,
+                                boxShadow: (theme) => `0 0 8px ${alpha(
+                                  task.status === 'completed'
+                                    ? theme.palette.success.main
+                                    : task.status === 'in-progress'
+                                    ? theme.palette.info.main
+                                    : theme.palette.warning.main,
+                                  0.6
+                                )}`,
+                                animation: task.status === 'in-progress' ? 'pulse 2s infinite' : 'none',
+                                '@keyframes pulse': {
+                                  '0%': {
+                                    transform: 'scale(1)',
+                                    opacity: 1,
+                                  },
+                                  '50%': {
+                                    transform: 'scale(1.2)',
+                                    opacity: 0.8,
+                                  },
+                                  '100%': {
+                                    transform: 'scale(1)',
+                                    opacity: 1,
+                                  },
+                                },
+                              }}
+                            />
+                            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <Chip
+                                  size="small"
+                                  label={task.priority}
+                                  sx={{
+                                    height: '28px',
+                                    borderRadius: '14px',
+                                    textTransform: 'capitalize',
+                                    fontWeight: 600,
+                                    px: 1.5,
+                                    background: (theme) => `linear-gradient(135deg, 
+                                      ${task.priority === 'high'
+                                        ? `${theme.palette.error.dark}, ${theme.palette.error.main}, ${alpha(theme.palette.error.light, 0.9)}`
+                                        : task.priority === 'medium'
+                                        ? `${theme.palette.warning.dark}, ${theme.palette.warning.main}, ${alpha(theme.palette.warning.light, 0.9)}`
+                                        : `${theme.palette.success.dark}, ${theme.palette.success.main}, ${alpha(theme.palette.success.light, 0.9)}`
+                                    })`,
+                                    color: '#fff',
+                                    letterSpacing: '0.5px',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                    boxShadow: (theme) => `
+                                      0 4px 12px ${alpha(
+                                        task.priority === 'high'
+                                          ? theme.palette.error.main
+                                          : task.priority === 'medium'
+                                          ? theme.palette.warning.main
+                                          : theme.palette.success.main,
+                                        0.3
+                                      )},
+                                      inset 0 2px 4px ${alpha(theme.palette.common.white, 0.2)}
+                                    `,
+                                    '& .MuiChip-label': {
+                                      px: 1,
+                                    },
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                      transform: 'translateY(-1px)',
+                                      boxShadow: (theme) => `
+                                        0 6px 16px ${alpha(
+                                          task.priority === 'high'
+                                            ? theme.palette.error.main
+                                            : task.priority === 'medium'
+                                            ? theme.palette.warning.main
+                                            : theme.palette.success.main,
+                                          0.4
+                                        )},
+                                        inset 0 2px 4px ${alpha(theme.palette.common.white, 0.2)}
+                                      `
+                                    }
+                                  }}
+                                />
+                                <Chip
+                                  size="small"
+                                  label={task.status}
+                                  sx={{
+                                    height: '28px',
+                                    borderRadius: '14px',
+                                    textTransform: 'capitalize',
+                                    fontWeight: 600,
+                                    px: 1.5,
+                                    background: (theme) => `linear-gradient(135deg, 
+                                      ${task.status === 'completed'
+                                        ? `${theme.palette.success.dark}, ${theme.palette.success.main}, ${alpha(theme.palette.success.light, 0.9)}`
+                                        : task.status === 'in-progress'
+                                        ? `${theme.palette.info.dark}, ${theme.palette.info.main}, ${alpha(theme.palette.info.light, 0.9)}`
+                                        : `${theme.palette.warning.dark}, ${theme.palette.warning.main}, ${alpha(theme.palette.warning.light, 0.9)}`
+                                    })`,
+                                    color: '#fff',
+                                    letterSpacing: '0.5px',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                    boxShadow: (theme) => `
+                                      0 4px 12px ${alpha(
+                                        task.status === 'completed'
+                                          ? theme.palette.success.main
+                                          : task.status === 'in-progress'
+                                          ? theme.palette.info.main
+                                          : theme.palette.warning.main,
+                                        0.3
+                                      )},
+                                      inset 0 2px 4px ${alpha(theme.palette.common.white, 0.2)}
+                                    `,
+                                    '& .MuiChip-label': {
+                                      px: 1,
+                                    },
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': {
+                                      transform: 'translateY(-1px)',
+                                      boxShadow: (theme) => `
+                                        0 6px 16px ${alpha(
+                                          task.status === 'completed'
+                                            ? theme.palette.success.main
+                                            : task.status === 'in-progress'
+                                            ? theme.palette.info.main
+                                            : theme.palette.warning.main,
+                                          0.4
+                                        )},
+                                        inset 0 2px 4px ${alpha(theme.palette.common.white, 0.2)}
+                                      `
+                                    }
+                                  }}
+                                />
+                              </Box>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => handleMenuClick(e, task)}
                                 sx={{
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                  mb: 2
+                                  ml: 1,
+                                  width: '32px',
+                                  height: '32px',
+                                  background: (theme) => `linear-gradient(135deg, 
+                                    ${alpha(theme.palette.primary.main, 0.08)},
+                                    ${alpha(theme.palette.primary.light, 0.12)}
+                                  )`,
+                                  backdropFilter: 'blur(4px)',
+                                  color: 'primary.main',
+                                  border: (theme) => `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                                  '&:hover': {
+                                    background: (theme) => `linear-gradient(135deg, 
+                                      ${alpha(theme.palette.primary.main, 0.12)},
+                                      ${alpha(theme.palette.primary.light, 0.16)}
+                                    )`,
+                                    transform: 'rotate(90deg) scale(1.1)',
+                                  },
+                                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                                 }}
                               >
-                                {task.description}
-                              </Typography>
+                                <MoreVertIcon sx={{ fontSize: 20 }} />
+                              </IconButton>
                             </Box>
 
-                            <Box sx={{ mt: 'auto' }}>
-                              <Stack spacing={2}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Chip
-                                    label={task.status}
-                                    size="small"
-                                    color={
-                                      task.status === 'completed'
-                                        ? 'success'
-                                        : task.status === 'in_progress'
-                                        ? 'primary'
-                                        : 'default'
-                                    }
-                                    sx={{
-                                      borderRadius: '8px',
-                                      fontWeight: 500,
-                                      textTransform: 'capitalize'
+                            <Typography 
+                              className="task-title"
+                              variant="h6" 
+                              sx={{ 
+                                mb: 1,
+                                fontWeight: 600,
+                                fontSize: '1.1rem',
+                                lineHeight: 1.3,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                minHeight: '2.6rem',
+                                color: 'text.primary',
+                                transition: 'all 0.3s ease',
+                              }}
+                            >
+                              {task.title}
+                            </Typography>
+
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                mb: 2,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                minHeight: '2.5rem',
+                                color: 'text.secondary',
+                                lineHeight: 1.6,
+                                letterSpacing: '0.2px',
+                              }}
+                            >
+                              {task.description}
+                            </Typography>
+
+                            <Stack 
+                              spacing={1.5} 
+                              sx={{ 
+                                p: 2,
+                                bgcolor: (theme) => alpha(theme.palette.background.paper, 0.5),
+                                borderRadius: 3,
+                                border: '1px solid',
+                                borderColor: (theme) => alpha(theme.palette.divider, 0.1),
+                                backdropFilter: 'blur(8px)',
+                                boxShadow: (theme) => `
+                                  inset 0 2px 4px ${alpha(theme.palette.common.black, 0.02)},
+                                  0 2px 8px ${alpha(theme.palette.common.black, 0.02)}
+                                `,
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1, alignItems: 'center' }}>
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    fontWeight: 600,
+                                    color: 'text.primary',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 0.8,
+                                    letterSpacing: '0.4px',
+                                  }}
+                                >
+                                  <TimelineIcon sx={{ 
+                                    fontSize: 18,
+                                    color: (theme) => task.progress === 100 
+                                      ? theme.palette.success.main 
+                                      : theme.palette.primary.main,
+                                    filter: (theme) => `drop-shadow(0 2px 4px ${alpha(
+                                      task.progress === 100 
+                                        ? theme.palette.success.main 
+                                        : theme.palette.primary.main,
+                                      0.4
+                                    )})`
+                                  }} />
+                                  Progress
+                                </Typography>
+                                  <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                      fontWeight: 700,
+                                    color: (theme) => task.progress === 100 
+                                      ? theme.palette.success.main
+                                      : task.progress > 0 
+                                      ? theme.palette.primary.main
+                                      : theme.palette.warning.main,
+                                    textShadow: (theme) => `0 2px 4px ${alpha(
+                                      task.progress === 100 
+                                        ? theme.palette.success.main
+                                        : task.progress > 0 
+                                        ? theme.palette.primary.main
+                                        : theme.palette.warning.main,
+                                      0.3
+                                    )}`,
+                                    letterSpacing: '0.4px',
                                     }}
-                                  />
-                                  <Box sx={{ 
+                                  >
+                                    {task.progress || 0}%
+                                  </Typography>
+                                </Box>
+                              <Box sx={{ position: 'relative' }}>
+                              <LinearProgress
+                                variant="determinate"
+                                value={task.progress || 0}
+                                sx={{
+                                    height: 12,
+                                    borderRadius: 6,
+                                    bgcolor: 'grey.100',
+                                  '& .MuiLinearProgress-bar': {
+                                      borderRadius: 6,
+                                      bgcolor: task.progress === 100 ? 'success.main' : task.progress > 0 ? 'primary.main' : 'warning.main',
+                                      boxShadow: 2,
+                                      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                                    }
+                                  }}
+                                />
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 12,
+                                    background: 'linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)',
+                                    borderRadius: 6,
+                                    pointerEvents: 'none',
+                                  }}
+                              />
+                            </Box>
+                            </Stack>
+
+                            <Stack 
+                              spacing={1.5} 
+                              sx={{ 
+                                p: 1.5,
+                                bgcolor: 'grey.50',
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <AccessTimeIcon 
+                                  fontSize="small" 
+                                  sx={{ 
+                                    color: new Date(task.dueDate) < new Date() && task.status !== 'completed'
+                                      ? 'error.main'
+                                      : 'text.secondary',
+                                    opacity: 0.7
+                                  }} 
+                                />
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    fontWeight: 500,
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: 0.5,
                                     color: new Date(task.dueDate) < new Date() && task.status !== 'completed'
                                       ? 'error.main'
                                       : 'text.secondary',
-                                  }}>
-                                    <AccessTimeIcon fontSize="small" />
-                                    <Typography variant="caption" sx={{ fontWeight: 500 }}>
-                                      Due {format(new Date(task.dueDate), 'MMM dd, yyyy')}
-                                    </Typography>
-                                  </Box>
-                                </Box>
+                                  }}
+                                >
+                                  Due {format(new Date(task.dueDate), 'MMM dd, yyyy')}
+                                  {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                                    <Chip
+                                      label="Overdue"
+                                      size="small"
+                                      color="error"
+                                      sx={{ 
+                                        height: 20,
+                                        fontSize: '0.7rem',
+                                        '& .MuiChip-label': { px: 1 }
+                                      }}
+                                    />
+                                  )}
+                                </Typography>
+                              </Box>
 
+                              {task.attachments?.length > 0 && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <LinearProgress
-                                    variant="determinate"
-                                    value={task.progress || 0}
-                                    sx={{
-                                      flexGrow: 1,
-                                      height: 6,
-                                      borderRadius: 3,
-                                      bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
-                                      '& .MuiLinearProgress-bar': {
-                                        borderRadius: 3,
-                                        background: (theme) => `linear-gradient(90deg, 
-                                          ${theme.palette.primary.main},
-                                          ${theme.palette.secondary.main}
-                                        )`
+                                  <Button
+                                    size="small"
+                                    startIcon={<AttachFileIcon />}
+                                    onClick={(e) => handleAttachmentsClick(e, task)}
+                                    sx={{ 
+                                      textTransform: 'none',
+                                      color: 'primary.main',
+                                      '&:hover': {
+                                        bgcolor: 'primary.50'
                                       }
                                     }}
-                                  />
-                                  <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                    {task.progress || 0}%
-                                  </Typography>
+                                  >
+                                    {task.attachments.length} attachment{task.attachments.length !== 1 ? 's' : ''}
+                                  </Button>
                                 </Box>
-                              </Stack>
-                            </Box>
+                              )}
+
+                              {/* Time Tracking Section */}
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 2 }}>
+                                <Button
+                                  size="small"
+                                  startIcon={
+                                    <TimerIcon 
+                                      sx={{ 
+                                        color: timeTrackingTask === task._id ? 'primary.main' : 'text.secondary'
+                                      }} 
+                                    />
+                                  }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setTimeTrackingTask(timeTrackingTask === task._id ? null : task._id);
+                                  }}
+                                    sx={{ 
+                                    textTransform: 'none',
+                                    color: timeTrackingTask === task._id ? 'primary.main' : 'text.secondary',
+                                    '&:hover': {
+                                      bgcolor: 'primary.50'
+                                    }
+                                  }}
+                                >
+                                  {timeTrackingTask === task._id ? 'Stop tracking' : 'Start tracking'}
+                                </Button>
+                                
+                                {timeTrackingTask === task._id && (
+                                  <Stopwatch 
+                                    taskId={task._id} 
+                                    onTimeUpdate={handleTimeUpdate}
+                                    initialTime={task.timeSpent || 0}
+                                  />
+                                )}
+                                
+                                {task.timeSpent > 0 && timeTrackingTask !== task._id && (
+                                  <Typography variant="body2" color="text.secondary">
+                                    Total time: {formatTime(task.timeSpent)}
+                                  </Typography>
+                              )}
+                              </Box>
+                            </Stack>
                           </CardContent>
 
                           <Box 
@@ -1420,52 +1795,69 @@ const Dashboard = () => {
                             sx={{ 
                               p: 2,
                               pt: 0,
+                              mt: 'auto',
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              opacity: 0.8,
-                              transform: 'translateY(4px)',
-                              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                               position: 'relative',
                               zIndex: 2
                             }}
                           >
                             <Button
                               variant="contained"
-                              color={task.status === 'completed' ? 'error' : 'success'}
-                              size="small"
+                              color="success"
                               onClick={(e) => {
                                 e.preventDefault();
-                                handleStatusChange(task);
+                                e.stopPropagation();
+                                if (task._id) {
+                                  handleTaskCompletion(task._id);
+                                }
                               }}
+                              startIcon={<CheckCircleIcon />}
                               sx={{
-                                borderRadius: '8px',
+                                borderRadius: 2,
                                 textTransform: 'none',
-                                fontWeight: 500,
-                                boxShadow: 'none',
+                                fontWeight: 600,
+                                py: 1,
+                                pointerEvents: 'auto',
                                 '&:hover': {
-                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: (theme) => `0 8px 16px ${alpha(theme.palette.success.main, 0.4)}`
                                 }
                               }}
                             >
-                              {task.status === 'completed' ? 'Mark Incomplete' : 'Mark Complete'}
+                              Mark Complete
                             </Button>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
                             <IconButton
                               size="small"
-                              onClick={(e) => handleMenuClick(e, task)}
+                              onClick={() => handleEdit(task)}
                               sx={{
-                                width: '32px',
-                                height: '32px',
-                                background: (theme) => alpha(theme.palette.primary.main, 0.1),
-                                backdropFilter: 'blur(4px)',
+                                bgcolor: 'primary.50',
                                 color: 'primary.main',
                                 '&:hover': {
-                                  background: (theme) => alpha(theme.palette.primary.main, 0.2)
+                                  bgcolor: 'primary.100',
+                                  transform: 'scale(1.1)',
                                 }
                               }}
                             >
-                              <MoreVertIcon fontSize="small" />
+                              <EditIcon fontSize="small" />
                             </IconButton>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleDelete(task._id)}
+                              sx={{
+                                bgcolor: 'error.50',
+                                color: 'error.main',
+                                '&:hover': {
+                                  bgcolor: 'error.100',
+                                  transform: 'scale(1.1)',
+                                }
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                            </Box>
                           </Box>
                         </Card>
                       </Grid>
@@ -1602,30 +1994,25 @@ const Dashboard = () => {
                       p: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                      bgcolor: 'primary.main',
                       color: 'white',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transition: 'all 0.3s ease',
                       minHeight: 140,
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: 4,
-                      boxShadow: '0 10px 20px rgba(99, 102, 241, 0.3)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
+                        transform: 'translateY(-4px)',
                         '& .icon-bg': {
-                          transform: 'scale(1.2) rotate(10deg)',
+                          transform: 'scale(1.1)',
                         }
                       }
                     }}>
                       <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <TotalIcon sx={{ fontSize: 32, mr: 1 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>Total Tasks</Typography>
+                          <Typography variant="h6">Total Tasks</Typography>
                         </Box>
-                        <Typography variant="h3" sx={{ 
-                          fontWeight: 'bold',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                        }}>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                           {getTaskStats().total}
                         </Typography>
                       </Box>
@@ -1635,7 +2022,7 @@ const Dashboard = () => {
                         bottom: -20,
                         opacity: 0.2,
                         transform: 'scale(1)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'transform 0.3s ease',
                       }}>
                         <TotalIcon sx={{ fontSize: 140 }} />
                       </Box>
@@ -1646,30 +2033,25 @@ const Dashboard = () => {
                       p: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                      bgcolor: 'warning.main',
                       color: 'white',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transition: 'all 0.3s ease',
                       minHeight: 140,
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: 4,
-                      boxShadow: '0 10px 20px rgba(245, 158, 11, 0.3)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
+                        transform: 'translateY(-4px)',
                         '& .icon-bg': {
-                          transform: 'scale(1.2) rotate(10deg)',
+                          transform: 'scale(1.1)',
                         }
                       }
                     }}>
                       <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <PendingIcon sx={{ fontSize: 32, mr: 1 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>Pending Tasks</Typography>
+                          <Typography variant="h6">Pending Tasks</Typography>
                         </Box>
-                        <Typography variant="h3" sx={{ 
-                          fontWeight: 'bold',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                        }}>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                           {getTaskStats().pending}
                         </Typography>
                       </Box>
@@ -1679,7 +2061,7 @@ const Dashboard = () => {
                         bottom: -20,
                         opacity: 0.2,
                         transform: 'scale(1)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'transform 0.3s ease',
                       }}>
                         <PendingIcon sx={{ fontSize: 140 }} />
                       </Box>
@@ -1690,30 +2072,64 @@ const Dashboard = () => {
                       p: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      bgcolor: 'info.main',
                       color: 'white',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transition: 'all 0.3s ease',
                       minHeight: 140,
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: 4,
-                      boxShadow: '0 10px 20px rgba(16, 185, 129, 0.3)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
+                        transform: 'translateY(-4px)',
                         '& .icon-bg': {
-                          transform: 'scale(1.2) rotate(10deg)',
+                          transform: 'scale(1.1)',
+                        }
+                      }
+                    }}>
+                      <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <InProgressIcon sx={{ fontSize: 32, mr: 1 }} />
+                          <Typography variant="h6">In Progress</Typography>
+                        </Box>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                          {getTaskStats().inProgress}
+                        </Typography>
+                      </Box>
+                      <Box className="icon-bg" sx={{
+                        position: 'absolute',
+                        right: -20,
+                        bottom: -20,
+                        opacity: 0.2,
+                        transform: 'scale(1)',
+                        transition: 'transform 0.3s ease',
+                      }}>
+                        <InProgressIcon sx={{ fontSize: 140 }} />
+                      </Box>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Card sx={{
+                      p: 3,
+                      display: 'flex',
+                      alignItems: 'center',
+                      bgcolor: 'success.main',
+                      color: 'white',
+                      transition: 'all 0.3s ease',
+                      minHeight: 140,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        '& .icon-bg': {
+                          transform: 'scale(1.1)',
                         }
                       }
                     }}>
                       <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <CompletedIcon sx={{ fontSize: 32, mr: 1 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>Completed</Typography>
+                          <Typography variant="h6">Completed</Typography>
                         </Box>
-                        <Typography variant="h3" sx={{ 
-                          fontWeight: 'bold',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                        }}>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                           {getTaskStats().completed}
                         </Typography>
                       </Box>
@@ -1723,7 +2139,7 @@ const Dashboard = () => {
                         bottom: -20,
                         opacity: 0.2,
                         transform: 'scale(1)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'transform 0.3s ease',
                       }}>
                         <CompletedIcon sx={{ fontSize: 140 }} />
                       </Box>
@@ -1734,30 +2150,25 @@ const Dashboard = () => {
                       p: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                      bgcolor: '#6366f1',
                       color: 'white',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transition: 'all 0.3s ease',
                       minHeight: 140,
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: 4,
-                      boxShadow: '0 10px 20px rgba(59, 130, 246, 0.3)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
+                        transform: 'translateY(-4px)',
                         '& .icon-bg': {
-                          transform: 'scale(1.2) rotate(10deg)',
+                          transform: 'scale(1.1)',
                         }
                       }
                     }}>
                       <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <DueTodayIcon sx={{ fontSize: 32, mr: 1 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>Due Today</Typography>
+                          <Typography variant="h6">Due Today</Typography>
                         </Box>
-                        <Typography variant="h3" sx={{ 
-                          fontWeight: 'bold',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                        }}>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                           {getTaskStats().dueToday}
                         </Typography>
                       </Box>
@@ -1767,7 +2178,7 @@ const Dashboard = () => {
                         bottom: -20,
                         opacity: 0.2,
                         transform: 'scale(1)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'transform 0.3s ease',
                       }}>
                         <DueTodayIcon sx={{ fontSize: 140 }} />
                       </Box>
@@ -1778,30 +2189,25 @@ const Dashboard = () => {
                       p: 3,
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                      bgcolor: 'error.main',
                       color: 'white',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      transition: 'all 0.3s ease',
                       minHeight: 140,
                       position: 'relative',
                       overflow: 'hidden',
-                      borderRadius: 4,
-                      boxShadow: '0 10px 20px rgba(239, 68, 68, 0.3)',
                       '&:hover': {
-                        transform: 'translateY(-8px)',
+                        transform: 'translateY(-4px)',
                         '& .icon-bg': {
-                          transform: 'scale(1.2) rotate(10deg)',
+                          transform: 'scale(1.1)',
                         }
                       }
                     }}>
                       <Box sx={{ position: 'relative', zIndex: 1, width: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                           <OverdueIcon sx={{ fontSize: 32, mr: 1 }} />
-                          <Typography variant="h6" sx={{ fontWeight: 600 }}>Overdue</Typography>
+                          <Typography variant="h6">Overdue</Typography>
                         </Box>
-                        <Typography variant="h3" sx={{ 
-                          fontWeight: 'bold',
-                          textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                        }}>
+                        <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
                           {getTaskStats().overdue}
                         </Typography>
                       </Box>
@@ -1811,7 +2217,7 @@ const Dashboard = () => {
                         bottom: -20,
                         opacity: 0.2,
                         transform: 'scale(1)',
-                        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        transition: 'transform 0.3s ease',
                       }}>
                         <OverdueIcon sx={{ fontSize: 140 }} />
                       </Box>
