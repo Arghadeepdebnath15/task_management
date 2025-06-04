@@ -1,40 +1,37 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// Use the new JWT secret
+const JWT_SECRET = '3e8dd906a8c1cf21785f9b5142d802f4eb0c13a4387c44b7b6e808ebe4e9eaf2';
+
 const auth = async (req, res, next) => {
   try {
     // Get token from header
-    const authHeader = req.header('Authorization');
-    console.log('Auth header:', authHeader);
-    
-    if (!authHeader) {
-      return res.status(401).json({ message: 'No authorization header found' });
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.split(' ')[1];
     if (!token) {
-      return res.status(401).json({ message: 'No token found in authorization header' });
+      return res.status(401).json({ message: 'No token, authorization denied' });
     }
 
-    // Verify token
-    console.log('Verifying token with secret:', process.env.JWT_SECRET ? 'Secret exists' : 'No secret found');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'task_management_secret_key_2024');
-    console.log('Decoded token:', { ...decoded, userId: decoded.userId });
-    
-    // Find user
+    // Verify token using the consistent secret
+    console.log('Verifying token with secret:', process.env.JWT_SECRET ? 'Secret exists' : 'Using default secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || JWT_SECRET);
+
+    // Add user from payload
     const user = await User.findById(decoded.userId).select('-password');
-    console.log('Found user:', user ? 'Yes' : 'No');
-    
     if (!user) {
-      return res.status(401).json({ message: 'User not found' });
+      return res.status(401).json({ message: 'Token is valid but user not found' });
     }
 
-    // Add user to request object
     req.user = user;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    res.status(401).json({ message: 'Authentication failed', error: error.message });
+    res.status(401).json({ message: 'Token is not valid', error: error.message });
   }
 };
 
