@@ -2,9 +2,10 @@ import axios from 'axios';
 
 // API URL configuration
 const LOCAL_URL = 'http://localhost:5000';
+const PRODUCTION_URL = 'https://task-management-0dpa.onrender.com';
 
-// Select appropriate API URL
-const API_URL = LOCAL_URL;
+// Select appropriate API URL based on environment
+const API_URL = window.location.hostname === 'localhost' ? LOCAL_URL : PRODUCTION_URL;
 
 console.log('Base API URL:', API_URL);
 
