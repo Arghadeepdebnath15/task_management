@@ -35,11 +35,6 @@ api.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // Set specific headers for production
-  if (isProduction) {
-    config.headers['Origin'] = 'https://task-management-0dpa.netlify.app';
-  }
-
   return config;
 }, (error) => {
   console.error('Request error:', error);
@@ -57,12 +52,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('Response error:', {
-      url: error.config?.url,
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
-    });
+    if (error.response) {
+      console.error('Response error:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+    } else {
+      console.error('Network error:', {
+        url: error.config?.url,
+        message: error.message
+      });
+    }
 
     if (error.code === 'ECONNABORTED') {
       throw new Error('Request timeout - server took too long to respond');

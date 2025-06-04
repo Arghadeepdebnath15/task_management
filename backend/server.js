@@ -23,92 +23,47 @@ const app = express();
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
   console.log('Headers:', req.headers);
-  console.log('Body:', req.body);
+  if (req.method !== 'OPTIONS') {
+    console.log('Body:', req.body);
+  }
   next();
 });
 
 // CORS configuration
-const defaultOrigins = ['http://localhost:5173', 'http://localhost:5174'];
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? [...defaultOrigins, ...process.env.ALLOWED_ORIGINS.split(',')]
-  : defaultOrigins;
-
-console.log('Configured CORS origins:', allowedOrigins);
+const allowedOrigins = [
+  'https://task-management-0dpa.netlify.app',
+  'http://localhost:5173',
+  'http://localhost:5174'
+];
 
 const corsOptions = {
-  origin: (origin, callback) => {
+  origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+    if (!origin) {
+      console.log('Request has no origin');
+      return callback(null, true);
+    }
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('Origin allowed:', origin);
       callback(null, true);
     } else {
       console.log('Origin not allowed:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: false,
-  optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
+  optionsSuccessStatus: 200
 };
 
-// Middleware
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Add headers middleware
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin');
-  next();
-});
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.url,
-    method: req.method
-  });
-  
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: err.message,
-    path: req.url
-  });
-});
-
-// Cloudinary Configuration
-if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
-  console.log('Configuring Cloudinary...');
-  cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-  });
-  
-  // Verify Cloudinary configuration
-  cloudinary.api.ping()
-    .then(() => console.log('Cloudinary configuration verified successfully'))
-    .catch(error => console.error('Cloudinary configuration error:', error));
-} else {
-  console.error('Cloudinary configuration is missing. Required environment variables:');
-  console.error('- CLOUDINARY_CLOUD_NAME');
-  console.error('- CLOUDINARY_API_KEY');
-  console.error('- CLOUDINARY_API_SECRET');
-}
-
-// MongoDB Connection
-const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://2023422375arghadeep:SjEckjBfyu8ECtBD@cluster0.y1rybwu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-mongoose.connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -120,9 +75,10 @@ app.get('/health', (req, res) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV,
-    routes: {
-      auth: '/api/auth/*',
-      tasks: '/api/tasks/*'
+    cors: {
+      allowedOrigins,
+      methods: corsOptions.methods,
+      headers: corsOptions.allowedHeaders
     }
   });
 });
@@ -134,6 +90,11 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     environment: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
+    cors: {
+      allowedOrigins,
+      methods: corsOptions.methods,
+      headers: corsOptions.allowedHeaders
+    },
     endpoints: {
       auth: {
         login: { 
@@ -199,9 +160,60 @@ app.use((req, res) => {
   });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.url,
+    method: req.method
+  });
+  
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      message: 'CORS error',
+      error: 'Origin not allowed',
+      allowedOrigins
+    });
+  }
+  
+  res.status(500).json({ 
+    message: 'Something went wrong!',
+    error: err.message,
+    path: req.url
+  });
+});
+
+// Cloudinary Configuration
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  console.log('Configuring Cloudinary...');
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+  });
+  
+  // Verify Cloudinary configuration
+  cloudinary.api.ping()
+    .then(() => console.log('Cloudinary configuration verified successfully'))
+    .catch(error => console.error('Cloudinary configuration error:', error));
+} else {
+  console.error('Cloudinary configuration is missing. Required environment variables:');
+  console.error('- CLOUDINARY_CLOUD_NAME');
+  console.error('- CLOUDINARY_API_KEY');
+  console.error('- CLOUDINARY_API_SECRET');
+}
+
+// MongoDB Connection
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb+srv://2023422375arghadeep:SjEckjBfyu8ECtBD@cluster0.y1rybwu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   console.log('Environment:', process.env.NODE_ENV);
-  console.log('CORS origins:', corsOptions.origin);
+  console.log('Allowed Origins:', allowedOrigins);
 }); 
