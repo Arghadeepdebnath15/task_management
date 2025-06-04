@@ -121,7 +121,10 @@ export const auth = {
 
   login: async (credentials) => {
     try {
-      console.log('Starting login process...');
+      console.log('Starting login process with:', {
+        email: credentials.email,
+        hasPassword: !!credentials.password
+      });
       const response = await api.post('/api/auth/login', credentials);
 
       if (response.data.token) {
@@ -134,7 +137,13 @@ export const auth = {
       console.error('Login failed:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+          headers: error.config?.headers
+        }
       });
       throw error;
     }

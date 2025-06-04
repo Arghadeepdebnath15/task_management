@@ -20,7 +20,7 @@ const app = express();
 // CORS configuration
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://task-management-0dpa.netlify.app', 'http://localhost:5173']
+    ? ['https://allinon.netlify.app', 'http://localhost:5173']
     : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   optionsSuccessStatus: 200,
