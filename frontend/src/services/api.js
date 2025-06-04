@@ -2,23 +2,39 @@ import axios from 'axios';
 
 // API URL configuration
 const RENDER_URL = 'https://task-management-0dpa.onrender.com';
+const NETLIFY_URL = 'https://allinon.netlify.app';
 const LOCAL_URL = 'http://localhost:5000';
 
-// Force production URL when deployed to Netlify
-const isProduction = window.location.hostname.includes('netlify.app');
-const API_URL = isProduction ? RENDER_URL : LOCAL_URL;
+// Environment detection
+const isNetlify = window.location.hostname.includes('netlify.app');
+const isRender = window.location.hostname.includes('onrender.com');
+const isProduction = import.meta.env.PROD || !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
-console.log('Environment:', isProduction ? 'production' : 'development');
+// Select appropriate API URL
+let API_URL;
+if (isNetlify) {
+  API_URL = RENDER_URL; // Always use Render backend when deployed on Netlify
+} else if (isRender) {
+  API_URL = RENDER_URL;
+} else {
+  API_URL = isProduction ? RENDER_URL : LOCAL_URL;
+}
+
+console.log('Environment:', {
+  isProduction,
+  isNetlify,
+  isRender,
+  hostname: window.location.hostname
+});
 console.log('Base API URL:', API_URL);
-console.log('Hostname:', window.location.hostname);
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: false, // Changed to false since we're using token auth
-  timeout: 15000, // Increased timeout to 15 seconds
+  withCredentials: true,
+  timeout: 10000, // 10 second timeout
 });
 
 // Request interceptor
@@ -34,7 +50,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   return config;
 }, (error) => {
   console.error('Request error:', error);
@@ -52,19 +67,12 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response) {
-      console.error('Response error:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-    } else {
-      console.error('Network error:', {
-        url: error.config?.url,
-        message: error.message
-      });
-    }
+    console.error('Response error:', {
+      url: error.config?.url,
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
 
     if (error.code === 'ECONNABORTED') {
       throw new Error('Request timeout - server took too long to respond');

@@ -7,9 +7,6 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const auth = require('../middleware/auth');
 
-// Use the new JWT secret
-const JWT_SECRET = '3e8dd906a8c1cf21785f9b5142d802f4eb0c13a4387c44b7b6e808ebe4e9eaf2';
-
 // Multer configuration for file upload
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -66,7 +63,7 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -88,51 +85,35 @@ router.post('/register', upload.single('profilePicture'), async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login attempt received:', { 
+    console.log('Login attempt:', { 
       email: req.body.email,
-      hasPassword: !!req.body.password,
-      headers: req.headers,
-      body: req.body
+      hasPassword: !!req.body.password 
     });
 
     const { email, password } = req.body;
 
     if (!email || !password) {
       console.log('Missing login credentials:', { email: !!email, password: !!password });
-      return res.status(400).json({ 
-        message: 'Email and password are required',
-        received: { hasEmail: !!email, hasPassword: !!password }
-      });
+      return res.status(400).json({ message: 'Email and password are required' });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
       console.log('User not found:', { email });
-      return res.status(401).json({ 
-        message: 'Invalid credentials',
-        error: 'User not found'
-      });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    console.log('User found, comparing password...');
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
       console.log('Invalid password for user:', { email });
-      return res.status(401).json({ 
-        message: 'Invalid credentials',
-        error: 'Password mismatch'
-      });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    console.log('Login successful:', { 
-      id: user._id, 
-      username: user.username, 
-      email: user.email 
-    });
+    console.log('Login successful:', { id: user._id, username: user.username, email: user.email });
 
     const token = jwt.sign(
       { userId: user._id },
-      process.env.JWT_SECRET || JWT_SECRET,
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
@@ -146,17 +127,8 @@ router.post('/login', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', {
-      message: error.message,
-      stack: error.stack,
-      body: req.body,
-      headers: req.headers
-    });
-    res.status(500).json({ 
-      message: 'Error logging in', 
-      error: error.message,
-      details: 'An unexpected error occurred during login'
-    });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });
 

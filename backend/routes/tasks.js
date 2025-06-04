@@ -3,10 +3,25 @@ const router = express.Router();
 const Task = require('../models/Task');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
-const auth = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 // Multer configuration
 const upload = multer({ storage: multer.memoryStorage() });
+
+// Middleware to authenticate user
+const auth = async (req, res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return res.status(401).json({ message: 'No authentication token provided' });
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-super-secret-jwt-key-here');
+    req.userId = decoded.userId;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Please authenticate', error: error.message });
+  }
+};
 
 // Create new task
 router.post('/', auth, upload.array('attachments', 5), async (req, res) => {
@@ -52,7 +67,7 @@ router.post('/', auth, upload.array('attachments', 5), async (req, res) => {
       progress: progress || 0,
       status: status || 'pending',
       attachments,
-      user: req.user._id
+      user: req.userId
     });
 
     await task.save();
@@ -66,7 +81,7 @@ router.post('/', auth, upload.array('attachments', 5), async (req, res) => {
 // Get all tasks for a user
 router.get('/', auth, async (req, res) => {
   try {
-    const tasks = await Task.find({ user: req.user._id }).sort({ createdAt: -1 });
+    const tasks = await Task.find({ user: req.userId }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (error) {
     console.error('Task fetch error:', error);
@@ -120,7 +135,7 @@ router.patch('/:id', auth, upload.array('attachments', 5), async (req, res) => {
     }
 
     const task = await Task.findOneAndUpdate(
-      { _id: req.params.id, user: req.user._id },
+      { _id: req.params.id, user: req.userId },
       updates,
       { new: true }
     );
@@ -139,7 +154,7 @@ router.patch('/:id', auth, upload.array('attachments', 5), async (req, res) => {
 // Delete task
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({ _id: req.params.id, user: req.user._id });
+    const task = await Task.findOneAndDelete({ _id: req.params.id, user: req.userId });
     
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
