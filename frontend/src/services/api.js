@@ -15,7 +15,12 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
   withCredentials: true,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // Increased to 30 seconds
+  // Add retry configuration
+  retry: 3,
+  retryDelay: (retryCount) => {
+    return retryCount * 2000; // Wait 2s, 4s, 6s between retries
+  }
 });
 
 // Request interceptor
@@ -46,7 +51,7 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// Response interceptor
+// Response interceptor with retry logic
 api.interceptors.response.use(
   (response) => {
     console.log('Response details:', {
@@ -58,7 +63,7 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
     // Detailed error logging
     console.error('Response error details:', {
       message: error.message,
@@ -76,12 +81,29 @@ api.interceptors.response.use(
       }
     });
 
+    const config = error.config;
+    
+    // If we should retry the request
+    if (config && config.retry > 0) {
+      config.retry -= 1;
+      
+      // Create new promise with delay
+      const delayRetry = new Promise(resolve => {
+        setTimeout(resolve, config.retryDelay(3 - config.retry));
+      });
+      
+      // Wait for delay then retry request
+      await delayRetry;
+      console.log(`Retrying request to ${config.url}, ${config.retry} retries left`);
+      return api(config);
+    }
+
     if (error.code === 'ECONNABORTED') {
-      throw new Error('Request timeout - server took too long to respond');
+      throw new Error('Request timeout - server took too long to respond. Please check your connection and try again.');
     }
 
     if (!error.response) {
-      throw new Error('Network error - cannot connect to server. Is the backend running?');
+      throw new Error('Network error - cannot connect to server. Please check your connection and try again.');
     }
 
     if (error.response.status === 401) {
@@ -193,6 +215,7 @@ export const tasks = {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        timeout: 45000, // 45 seconds for file uploads
       });
       return response.data;
     } catch (error) {
@@ -204,7 +227,9 @@ export const tasks = {
   getAll: async () => {
     try {
       console.log('Fetching all tasks...');
-      const response = await api.get('/api/tasks');
+      const response = await api.get('/api/tasks', {
+        timeout: 45000, // 45 seconds for initial load
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to fetch tasks:', error);
@@ -219,7 +244,10 @@ export const tasks = {
         ? { 'Content-Type': 'multipart/form-data' }
         : { 'Content-Type': 'application/json' };
 
-      const response = await api.patch(`/api/tasks/${id}`, taskData, { headers });
+      const response = await api.patch(`/api/tasks/${id}`, taskData, { 
+        headers,
+        timeout: 45000, // 45 seconds for updates with attachments
+      });
       return response.data;
     } catch (error) {
       console.error('Failed to update task:', error);
