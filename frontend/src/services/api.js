@@ -5,7 +5,7 @@ const RENDER_URL = 'https://task-management-0dpa.onrender.com';
 const LOCAL_URL = 'http://localhost:5000';
 
 // Force production URL when deployed to Netlify
-const isProduction = import.meta.env.PROD || window.location.hostname !== 'localhost';
+const isProduction = window.location.hostname.includes('netlify.app');
 const API_URL = isProduction ? RENDER_URL : LOCAL_URL;
 
 console.log('Environment:', isProduction ? 'production' : 'development');
@@ -17,8 +17,8 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true,
-  timeout: 10000, // 10 second timeout
+  withCredentials: false, // Changed to false since we're using token auth
+  timeout: 15000, // Increased timeout to 15 seconds
 });
 
 // Request interceptor
@@ -34,6 +34,12 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Set specific headers for production
+  if (isProduction) {
+    config.headers['Origin'] = 'https://task-management-0dpa.netlify.app';
+  }
+
   return config;
 }, (error) => {
   console.error('Request error:', error);

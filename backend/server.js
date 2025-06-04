@@ -19,13 +19,11 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production'
-    ? ['https://task-management-0dpa.netlify.app', 'http://localhost:5173']
-    : ['http://localhost:5173', 'http://localhost:5174'],
-  credentials: true,
+  origin: ['https://task-management-0dpa.netlify.app', 'http://localhost:5173', 'http://localhost:5174'],
+  credentials: false,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
   exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
@@ -33,6 +31,14 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Add headers middleware
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin);
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,PATCH,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin');
+  next();
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
