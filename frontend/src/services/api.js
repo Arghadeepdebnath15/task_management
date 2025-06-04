@@ -1,31 +1,11 @@
 import axios from 'axios';
 
 // API URL configuration
-const RENDER_URL = 'https://task-management-0dpa.onrender.com';
-const NETLIFY_URL = 'https://allinon.netlify.app';
 const LOCAL_URL = 'http://localhost:5000';
 
-// Environment detection
-const isNetlify = window.location.hostname.includes('netlify.app');
-const isRender = window.location.hostname.includes('onrender.com');
-const isProduction = import.meta.env.PROD || !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
 // Select appropriate API URL
-let API_URL;
-if (isNetlify) {
-  API_URL = RENDER_URL; // Always use Render backend when deployed on Netlify
-} else if (isRender) {
-  API_URL = RENDER_URL;
-} else {
-  API_URL = isProduction ? RENDER_URL : LOCAL_URL;
-}
+const API_URL = LOCAL_URL;
 
-console.log('Environment:', {
-  isProduction,
-  isNetlify,
-  isRender,
-  hostname: window.location.hostname
-});
 console.log('Base API URL:', API_URL);
 
 const api = axios.create({
@@ -43,8 +23,13 @@ api.interceptors.request.use((config) => {
   const path = config.url.startsWith('/api/') ? config.url : `/api${config.url}`;
   config.url = path;
   
-  // Log the full request URL
-  console.log('Making request to:', `${config.baseURL}${config.url}`);
+  // Log the full request URL and headers
+  console.log('Request details:', {
+    url: `${config.baseURL}${config.url}`,
+    method: config.method,
+    headers: config.headers,
+    data: config.data
+  });
   
   const token = localStorage.getItem('token');
   if (token) {
@@ -52,26 +37,42 @@ api.interceptors.request.use((config) => {
   }
   return config;
 }, (error) => {
-  console.error('Request error:', error);
+  console.error('Request error details:', {
+    message: error.message,
+    code: error.code,
+    stack: error.stack
+  });
   return Promise.reject(error);
 });
 
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('Response received:', {
+    console.log('Response details:', {
       url: response.config.url,
       status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
       data: response.data
     });
     return response;
   },
   (error) => {
-    console.error('Response error:', {
-      url: error.config?.url,
+    // Detailed error logging
+    console.error('Response error details:', {
       message: error.message,
-      response: error.response?.data,
-      status: error.response?.status
+      code: error.code,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        headers: error.config?.headers,
+        data: error.config?.data
+      }
     });
 
     if (error.code === 'ECONNABORTED') {
@@ -79,23 +80,29 @@ api.interceptors.response.use(
     }
 
     if (!error.response) {
-      throw new Error('Network error - cannot connect to server');
+      throw new Error('Network error - cannot connect to server. Is the backend running?');
     }
 
     if (error.response.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      throw new Error(error.response.data?.message || 'Authentication failed');
     }
 
-    throw error;
+    throw new Error(error.response.data?.message || error.message || 'An error occurred');
   }
 );
 
 export const auth = {
   register: async (formData) => {
     try {
-      console.log('Starting registration process...');
+      console.log('Registration details:', {
+        username: formData.get('username'),
+        email: formData.get('email'),
+        hasPassword: !!formData.get('password'),
+        hasProfilePicture: !!formData.get('profilePicture')
+      });
+      
       const response = await api.post('/api/auth/register', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -110,10 +117,11 @@ export const auth = {
 
       return response.data;
     } catch (error) {
-      console.error('Registration failed:', {
+      console.error('Registration error details:', {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
+        stack: error.stack
       });
       throw error;
     }
@@ -121,11 +129,19 @@ export const auth = {
 
   login: async (credentials) => {
     try {
-      console.log('Starting login process with:', {
+      console.log('Login request details:', {
         email: credentials.email,
-        hasPassword: !!credentials.password
+        hasPassword: !!credentials.password,
+        timestamp: new Date().toISOString()
       });
+      
       const response = await api.post('/api/auth/login', credentials);
+
+      console.log('Login response details:', {
+        status: response.status,
+        hasToken: !!response.data.token,
+        hasUser: !!response.data.user
+      });
 
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -134,16 +150,20 @@ export const auth = {
 
       return response.data;
     } catch (error) {
-      console.error('Login failed:', {
+      console.error('Login error details:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: {
+        response: {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data
+        },
+        request: {
           url: error.config?.url,
           method: error.config?.method,
           baseURL: error.config?.baseURL,
           headers: error.config?.headers
-        }
+        },
+        stack: error.stack
       });
       throw error;
     }

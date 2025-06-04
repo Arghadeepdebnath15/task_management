@@ -17,19 +17,14 @@ import {
   DialogContent,
   DialogActions,
   Stack,
-  Checkbox,
   FormControl,
   InputLabel,
   Select,
-  LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
   useTheme,
   useMediaQuery,
   Collapse,
-  CardActionArea,
+  LinearProgress,
+  Slider,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -40,9 +35,9 @@ import {
   Category as CategoryIcon,
   Share as ShareIcon,
   Timer as TimerIcon,
-  Add as AddIcon,
   CheckCircle as CheckCircleIcon,
   RadioButtonUnchecked as UncheckedIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -67,8 +62,9 @@ const Todo = ({
   const [editMode, setEditMode] = useState(false);
   const [editedTodo, setEditedTodo] = useState(todo);
   const [showTimeTracker, setShowTimeTracker] = useState(false);
-  const [newSubtask, setNewSubtask] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const [progressAnchorEl, setProgressAnchorEl] = useState(null);
+  const [customProgress, setCustomProgress] = useState(todo.progress || 0);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -77,6 +73,7 @@ const Todo = ({
   };
 
   const handleMenuClick = (event) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
 
@@ -104,34 +101,26 @@ const Todo = ({
     handleMenuClose();
   };
 
-  const handleStatusToggle = () => {
+  const handleStatusToggle = (e) => {
+    e.stopPropagation();
     const newStatus = !todo.completed;
     onStatusChange && onStatusChange(todo.id, newStatus);
   };
 
-  const handleAddSubtask = () => {
-    if (newSubtask.trim()) {
-      const updatedSubtasks = [...(editedTodo.subtasks || []), {
-        id: Date.now(),
-        title: newSubtask,
-        completed: false
-      }];
-      setEditedTodo({ ...editedTodo, subtasks: updatedSubtasks });
-      setNewSubtask('');
-    }
+  const handleProgressClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setProgressAnchorEl(event.currentTarget);
   };
 
-  const handleSubtaskToggle = (subtaskId) => {
-    const updatedSubtasks = editedTodo.subtasks.map(subtask =>
-      subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask
-    );
-    setEditedTodo({ ...editedTodo, subtasks: updatedSubtasks });
+  const handleProgressClose = () => {
+    setProgressAnchorEl(null);
   };
 
-  const calculateProgress = () => {
-    if (!todo.subtasks?.length) return 0;
-    const completed = todo.subtasks.filter(task => task.completed).length;
-    return (completed / todo.subtasks.length) * 100;
+  const handleProgressUpdate = () => {
+    const updatedTodo = { ...todo, progress: customProgress };
+    onEdit(updatedTodo);
+    handleProgressClose();
   };
 
   const getPriorityColor = (priority) => {
@@ -147,358 +136,164 @@ const Todo = ({
     }
   };
 
-  const handleCardClick = (event) => {
-    if (
-      event.target.closest('button') ||
-      event.target.closest('input') ||
-      event.target.closest('.MuiChip-root')
-    ) {
-      return;
-    }
-    setExpanded(!expanded);
-  };
-
   return (
     <Card 
       sx={{ 
         mb: 2,
         position: 'relative',
-        transition: 'all 0.3s ease-in-out',
+        transition: 'all 0.3s ease',
         '&:hover': {
-          transform: isMobile ? 'none' : 'translateY(-2px)',
-          boxShadow: isMobile ? 2 : 4,
+          transform: 'translateY(-2px)',
+          boxShadow: 3
         },
-        opacity: todo.completed ? 0.7 : 1,
-        width: isMobile ? 'calc(50% - 8px)' : '100%',
-        display: 'inline-block',
-        verticalAlign: 'top',
-        height: isMobile && !expanded ? '180px' : 'auto',
-        overflow: 'hidden',
-        cursor: isMobile ? 'pointer' : 'default',
+        cursor: 'pointer'
       }}
+      onClick={() => setExpanded(!expanded)}
     >
-      <CardActionArea 
-        onClick={isMobile ? handleCardClick : undefined}
-        sx={{
-          height: '100%',
-          '&:hover': {
-            backgroundColor: 'transparent',
-          },
-        }}
-      >
-        <CardContent 
-          sx={{ 
-            p: isMobile ? 1.5 : 2,
-            '&:last-child': { pb: isMobile ? 1.5 : 2 },
-            height: '100%',
-            overflow: isMobile && !expanded ? 'hidden' : 'visible',
-          }}
-        >
-          <Box 
-            sx={{ 
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              mb: 2,
-              flexDirection: isMobile ? 'column' : 'row',
-            }}
-          >
-            <Box 
-              sx={{ 
-                display: 'flex',
-                alignItems: 'flex-start',
-                flex: 1,
-                width: '100%',
-              }}
-            >
-              <Checkbox
-                checked={todo.completed}
-                onChange={handleStatusToggle}
-                icon={<UncheckedIcon />}
-                checkedIcon={<CheckCircleIcon />}
-                sx={{ 
-                  p: isMobile ? 0.5 : 1,
-                  mt: isMobile ? 0.5 : 0,
-                }}
-              />
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                {editMode ? (
-                  <TextField
-                    fullWidth
-                    value={editedTodo.title}
-                    onChange={(e) => setEditedTodo({ ...editedTodo, title: e.target.value })}
-                    size="small"
-                    sx={{ mb: 2 }}
-                  />
-                ) : (
-                  <Typography 
-                    variant={isMobile ? "subtitle1" : "h6"}
-                    component="div"
-                    gutterBottom
-                    sx={{ 
-                      textDecoration: todo.completed ? 'line-through' : 'none',
-                      wordBreak: 'break-word',
-                      pr: isMobile ? 3 : 0,
-                      fontSize: isMobile ? '0.875rem' : undefined,
-                      lineHeight: 1.2,
-                      mb: isMobile ? 0.5 : undefined,
-                    }}
-                  >
-                    {todo.title}
-                  </Typography>
-                )}
-
-                {(!isMobile || expanded || editMode) && (
-                  editMode ? (
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={2}
-                      value={editedTodo.description}
-                      onChange={(e) => setEditedTodo({ ...editedTodo, description: e.target.value })}
-                      size="small"
-                    />
-                  ) : (
-                    <Typography 
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ 
-                        wordBreak: 'break-word',
-                        fontSize: isMobile ? '0.75rem' : '0.875rem',
-                        display: '-webkit-box',
-                        WebkitLineClamp: isMobile && !expanded ? 2 : 'none',
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      {todo.description}
-                    </Typography>
-                  )
-                )}
-              </Box>
-            </Box>
-
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <IconButton 
-              onClick={handleMenuClick}
-              size="small"
-              sx={{ 
-                position: isMobile ? 'absolute' : 'relative',
-                right: isMobile ? 8 : 'auto',
-                top: isMobile ? 8 : 'auto',
-              }}
+              size="small" 
+              onClick={handleStatusToggle}
             >
-              <MoreVertIcon />
+              {todo.completed ? 
+                <CheckCircleIcon color="success" /> : 
+                <UncheckedIcon />
+              }
             </IconButton>
-          </Box>
-
-          <Collapse in={!isMobile || expanded || editMode}>
             {editMode ? (
-              <Stack spacing={2} sx={{ mb: 2 }}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    label="Due Date"
-                    value={editedTodo.deadline ? new Date(editedTodo.deadline) : null}
-                    onChange={(newValue) => setEditedTodo({ ...editedTodo, deadline: newValue })}
-                    renderInput={(params) => (
-                      <TextField 
-                        {...params} 
-                        size="small"
-                        fullWidth
-                        sx={{ 
-                          '& .MuiInputBase-root': {
-                            fontSize: isMobile ? '0.875rem' : '1rem'
-                          }
-                        }}
-                      />
-                    )}
-                  />
-                </LocalizationProvider>
-
-                <FormControl size="small" fullWidth>
-                  <InputLabel>Priority</InputLabel>
-                  <Select
-                    value={editedTodo.priority || ''}
-                    onChange={(e) => setEditedTodo({ ...editedTodo, priority: e.target.value })}
-                    label="Priority"
-                    sx={{ 
-                      '& .MuiSelect-select': {
-                        fontSize: isMobile ? '0.875rem' : '1rem'
-                      }
-                    }}
-                  >
-                    {priorityOptions.map(option => (
-                      <MenuItem 
-                        key={option} 
-                        value={option}
-                        sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
-                      >
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl size="small" fullWidth>
-                  <InputLabel>Category</InputLabel>
-                  <Select
-                    value={editedTodo.category || ''}
-                    onChange={(e) => setEditedTodo({ ...editedTodo, category: e.target.value })}
-                    label="Category"
-                    sx={{ 
-                      '& .MuiSelect-select': {
-                        fontSize: isMobile ? '0.875rem' : '1rem'
-                      }
-                    }}
-                  >
-                    {categoryOptions.map(option => (
-                      <MenuItem 
-                        key={option} 
-                        value={option}
-                        sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
-                      >
-                        {option}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Stack>
+              <TextField
+                value={editedTodo.title}
+                onChange={(e) => setEditedTodo({ ...editedTodo, title: e.target.value })}
+                size="small"
+                onClick={(e) => e.stopPropagation()}
+              />
             ) : (
-              <Stack 
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                flexWrap="wrap"
-                useFlexGap
+              <Typography 
+                variant="h6" 
                 sx={{ 
-                  mb: 2,
-                  gap: 0.5,
-                  '& .MuiChip-root': {
-                    height: '24px',
-                    fontSize: '0.75rem',
-                  }
+                  textDecoration: todo.completed ? 'line-through' : 'none',
+                  color: todo.completed ? 'text.secondary' : 'text.primary'
                 }}
               >
-                <Chip
-                  icon={<FlagIcon sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }} />}
-                  label={todo.priority || 'No Priority'}
-                  size={isMobile ? "small" : "medium"}
-                  color={getPriorityColor(todo.priority)}
-                />
-                
-                {todo.deadline && (
-                  <Chip
-                    icon={<TimeIcon />}
-                    label={format(new Date(todo.deadline), 'MMM dd, yyyy')}
-                    size={isMobile ? "small" : "medium"}
-                    color="info"
-                  />
-                )}
-                
-                {todo.category && (
-                  <Chip
-                    icon={<CategoryIcon />}
-                    label={todo.category}
-                    size={isMobile ? "small" : "medium"}
-                    color="secondary"
-                  />
-                )}
-
-                <Chip
-                  icon={<TimerIcon />}
-                  label="Time Tracking"
-                  size={isMobile ? "small" : "medium"}
-                  color={showTimeTracker ? "primary" : "default"}
-                  onClick={() => setShowTimeTracker(!showTimeTracker)}
-                />
-              </Stack>
-            )}
-
-            {showTimeTracker && (
-              <Box sx={{ mt: 2 }}>
-                <Stopwatch 
-                  taskId={todo.id} 
-                  onTimeUpdate={handleTimeUpdate}
-                  initialTime={todo.timeSpent || 0}
-                />
-              </Box>
-            )}
-
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle2" gutterBottom>
-                Subtasks {todo.subtasks?.length > 0 && `(${todo.subtasks.filter(st => st.completed).length}/${todo.subtasks.length})`}
+                {todo.title}
               </Typography>
-              
-              {todo.subtasks?.length > 0 && (
-                <LinearProgress 
-                  variant="determinate" 
-                  value={calculateProgress()} 
-                  sx={{ mb: 1 }} 
-                />
-              )}
-
-              <List dense>
-                {editedTodo.subtasks?.map((subtask) => (
-                  <ListItem key={subtask.id} disablePadding>
-                    <ListItemIcon>
-                      <Checkbox
-                        edge="start"
-                        checked={subtask.completed}
-                        onChange={() => handleSubtaskToggle(subtask.id)}
-                        disabled={!editMode}
-                      />
-                    </ListItemIcon>
-                    <ListItemText 
-                      primary={subtask.title}
-                      sx={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}
-                    />
-                    {editMode && (
-                      <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          size="small"
-                          onClick={() => {
-                            const updatedSubtasks = editedTodo.subtasks.filter(st => st.id !== subtask.id);
-                            setEditedTodo({ ...editedTodo, subtasks: updatedSubtasks });
-                          }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </ListItemSecondaryAction>
-                    )}
-                  </ListItem>
-                ))}
-              </List>
-
-              {editMode && (
-                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Add subtask"
-                    value={newSubtask}
-                    onChange={(e) => setNewSubtask(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
-                  />
-                  <Button
-                    startIcon={<AddIcon />}
-                    onClick={handleAddSubtask}
-                    variant="outlined"
-                    size="small"
-                  >
-                    Add
-                  </Button>
-                </Box>
-              )}
-            </Box>
-
-            {editMode && (
-              <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                <Button size="small" onClick={handleCancel}>Cancel</Button>
-                <Button size="small" variant="contained" onClick={handleSave}>Save</Button>
-              </Box>
             )}
-          </Collapse>
-        </CardContent>
-      </CardActionArea>
+          </Box>
+          <IconButton onClick={handleMenuClick}>
+            <MoreVertIcon />
+          </IconButton>
+        </Box>
+
+        <Collapse in={expanded}>
+          {editMode ? (
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              value={editedTodo.description}
+              onChange={(e) => setEditedTodo({ ...editedTodo, description: e.target.value })}
+              sx={{ mb: 2 }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <Typography color="text.secondary" sx={{ mb: 2 }}>
+              {todo.description}
+            </Typography>
+          )}
+
+          <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+            <Chip 
+              icon={<FlagIcon />} 
+              label={todo.priority} 
+              color={getPriorityColor(todo.priority)}
+              size="small"
+            />
+            <Chip 
+              icon={<TimeIcon />} 
+              label={format(new Date(todo.dueDate), 'MMM dd, yyyy')}
+              size="small"
+            />
+            {todo.category && (
+              <Chip 
+                icon={<CategoryIcon />} 
+                label={todo.category}
+                size="small"
+              />
+            )}
+          </Stack>
+
+          <Box sx={{ mt: 2 }}>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                mb: 1, 
+                alignItems: 'center',
+                cursor: 'pointer',
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleProgressClick(e);
+              }}
+            >
+              <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <TimelineIcon fontSize="small" />
+                Progress: {todo.progress || 0}%
+              </Typography>
+            </Box>
+            <Box 
+              sx={{ 
+                position: 'relative', 
+                cursor: 'pointer',
+                '&:hover': {
+                  opacity: 0.8
+                },
+                padding: '8px 0',
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleProgressClick(e);
+              }}
+            >
+              <LinearProgress
+                variant="determinate"
+                value={todo.progress || 0}
+                sx={{
+                  height: 10,
+                  borderRadius: 5,
+                  bgcolor: 'grey.200',
+                  cursor: 'pointer',
+                  '& .MuiLinearProgress-bar': {
+                    borderRadius: 5,
+                    bgcolor: todo.progress === 100 ? 'success.main' : 'primary.main'
+                  }
+                }}
+              />
+            </Box>
+          </Box>
+
+          {showTimeTracker && (
+            <Box sx={{ mt: 2 }}>
+              <Stopwatch 
+                taskId={todo.id} 
+                onTimeUpdate={handleTimeUpdate}
+                initialTime={todo.timeSpent || 0}
+              />
+            </Box>
+          )}
+
+          {editMode && (
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+              <Button size="small" onClick={handleCancel}>Cancel</Button>
+              <Button size="small" variant="contained" onClick={handleSave}>Save</Button>
+            </Box>
+          )}
+        </Collapse>
+      </CardContent>
 
       <Menu
         anchorEl={anchorEl}
@@ -527,6 +322,77 @@ const Todo = ({
           </ListItemIcon>
           Delete
         </MenuItem>
+      </Menu>
+
+      <Menu
+        anchorEl={progressAnchorEl}
+        open={Boolean(progressAnchorEl)}
+        onClose={handleProgressClose}
+        onClick={(e) => e.stopPropagation()}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'center',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'center',
+        }}
+        PaperProps={{
+          sx: {
+            width: 300,
+            p: 2,
+          }
+        }}
+      >
+        <Typography variant="subtitle1" gutterBottom>
+          Update Progress
+        </Typography>
+        <Box sx={{ px: 1, py: 2 }} onClick={(e) => e.stopPropagation()}>
+          <Typography variant="body2" gutterBottom>
+            Progress: {customProgress}%
+          </Typography>
+          <Slider
+            value={customProgress}
+            onChange={(_, value) => setCustomProgress(value)}
+            valueLabelDisplay="auto"
+            step={5}
+            marks
+            min={0}
+            max={100}
+          />
+          <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+            {[0, 25, 50, 75, 100].map((value) => (
+              <Button
+                key={value}
+                size="small"
+                variant={customProgress === value ? "contained" : "outlined"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCustomProgress(value);
+                }}
+              >
+                {value}%
+              </Button>
+            ))}
+          </Stack>
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+          <Button onClick={(e) => {
+            e.stopPropagation();
+            handleProgressClose();
+          }}>
+            Cancel
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleProgressUpdate();
+            }}
+          >
+            Update
+          </Button>
+        </Box>
       </Menu>
     </Card>
   );
