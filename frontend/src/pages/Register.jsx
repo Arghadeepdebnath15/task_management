@@ -64,6 +64,13 @@ const Register = () => {
     onSubmit: async (values) => {
       try {
         setLoading(true);
+        console.log('Starting registration with values:', {
+          username: values.username,
+          email: values.email,
+          hasPassword: !!values.password,
+          hasProfilePicture: !!values.profilePicture
+        });
+
         const formData = new FormData();
         formData.append('username', values.username);
         formData.append('email', values.email);
@@ -72,12 +79,30 @@ const Register = () => {
           formData.append('profilePicture', values.profilePicture);
         }
 
+        console.log('Sending registration request...');
         const data = await auth.register(formData);
-        login(data.user, data.token);
+        console.log('Registration successful:', data);
+        
+        login({ ...data.user, token: data.token });
         toast.success('Registration successful!');
         navigate('/');
       } catch (error) {
-        toast.error(error.response?.data?.message || 'Registration failed');
+        console.error('Registration error details:', {
+          message: error.message,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
+        // More specific error messages
+        if (error.response?.status === 400) {
+          toast.error(error.response.data.message || 'Invalid registration data');
+        } else if (error.response?.status === 409) {
+          toast.error('Username or email already exists');
+        } else if (error.message === 'Network Error') {
+          toast.error('Cannot connect to server. Please try again later.');
+        } else {
+          toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
+        }
       } finally {
         setLoading(false);
       }

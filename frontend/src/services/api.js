@@ -50,22 +50,53 @@ api.interceptors.response.use(
 
 export const auth = {
   register: async (formData) => {
-    const response = await api.post('/auth/register', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+    try {
+      console.log('Making registration request to:', `${API_URL}/auth/register`);
+      const response = await api.post('/auth/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('Registration response:', response.data);
+      
+      // Store token immediately after successful registration
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Registration request failed:', {
+        url: `${API_URL}/auth/register`,
+        error: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
   
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    // Store token immediately after successful login
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    try {
+      console.log('Making login request to:', `${API_URL}/auth/login`);
+      const response = await api.post('/auth/login', credentials);
+      console.log('Login response:', response.data);
+      
+      // Store token immediately after successful login
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Login request failed:', {
+        url: `${API_URL}/auth/login`,
+        error: error.message,
+        response: error.response?.data
+      });
+      throw error;
     }
-    return response.data;
   },
 
   updateProfile: async (formData) => {
