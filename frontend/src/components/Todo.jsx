@@ -26,6 +26,8 @@ import {
   ListItem,
   ListItemText,
   ListItemSecondaryAction,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -64,6 +66,8 @@ const Todo = ({
   const [editedTodo, setEditedTodo] = useState(todo);
   const [showTimeTracker, setShowTimeTracker] = useState(false);
   const [newSubtask, setNewSubtask] = useState('');
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const handleTimeUpdate = (taskId, newTime) => {
     onTimeUpdate && onTimeUpdate(taskId, newTime);
@@ -146,21 +150,40 @@ const Todo = ({
       position: 'relative',
       transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
       '&:hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: 4,
+        transform: isMobile ? 'none' : 'translateY(-2px)',
+        boxShadow: isMobile ? 2 : 4,
       },
       opacity: todo.completed ? 0.7 : 1,
+      width: '100%',
     }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+      <CardContent sx={{ 
+        p: isMobile ? 1.5 : 2,
+        '&:last-child': { pb: isMobile ? 1.5 : 2 }
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start', 
+          mb: 2,
+          flexDirection: isMobile ? 'column' : 'row',
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'flex-start', 
+            flex: 1,
+            width: '100%',
+          }}>
             <Checkbox
               checked={todo.completed}
               onChange={handleStatusToggle}
               icon={<UncheckedIcon />}
               checkedIcon={<CheckCircleIcon />}
+              sx={{ 
+                p: isMobile ? 0.5 : 1,
+                mt: isMobile ? 0.5 : 0
+              }}
             />
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               {editMode ? (
                 <TextField
                   fullWidth
@@ -171,10 +194,14 @@ const Todo = ({
                 />
               ) : (
                 <Typography 
-                  variant="h6" 
+                  variant={isMobile ? "subtitle1" : "h6"}
                   component="div" 
                   gutterBottom
-                  sx={{ textDecoration: todo.completed ? 'line-through' : 'none' }}
+                  sx={{ 
+                    textDecoration: todo.completed ? 'line-through' : 'none',
+                    wordBreak: 'break-word',
+                    pr: isMobile ? 3 : 0
+                  }}
                 >
                   {todo.title}
                 </Typography>
@@ -190,14 +217,29 @@ const Todo = ({
                   size="small"
                 />
               ) : (
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    wordBreak: 'break-word',
+                    fontSize: isMobile ? '0.875rem' : '1rem'
+                  }}
+                >
                   {todo.description}
                 </Typography>
               )}
             </Box>
           </Box>
 
-          <IconButton onClick={handleMenuClick} size="small">
+          <IconButton 
+            onClick={handleMenuClick} 
+            size="small"
+            sx={{ 
+              position: isMobile ? 'absolute' : 'relative',
+              right: isMobile ? 8 : 'auto',
+              top: isMobile ? 8 : 'auto',
+            }}
+          >
             <MoreVertIcon />
           </IconButton>
         </Box>
@@ -209,42 +251,89 @@ const Todo = ({
                 label="Due Date"
                 value={editedTodo.deadline ? new Date(editedTodo.deadline) : null}
                 onChange={(newValue) => setEditedTodo({ ...editedTodo, deadline: newValue })}
-                renderInput={(params) => <TextField {...params} size="small" />}
+                renderInput={(params) => (
+                  <TextField 
+                    {...params} 
+                    size="small"
+                    fullWidth
+                    sx={{ 
+                      '& .MuiInputBase-root': {
+                        fontSize: isMobile ? '0.875rem' : '1rem'
+                      }
+                    }}
+                  />
+                )}
               />
             </LocalizationProvider>
 
-            <FormControl size="small">
+            <FormControl size="small" fullWidth>
               <InputLabel>Priority</InputLabel>
               <Select
                 value={editedTodo.priority || ''}
                 onChange={(e) => setEditedTodo({ ...editedTodo, priority: e.target.value })}
                 label="Priority"
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    fontSize: isMobile ? '0.875rem' : '1rem'
+                  }
+                }}
               >
                 {priorityOptions.map(option => (
-                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                  <MenuItem 
+                    key={option} 
+                    value={option}
+                    sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+                  >
+                    {option}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
 
-            <FormControl size="small">
+            <FormControl size="small" fullWidth>
               <InputLabel>Category</InputLabel>
               <Select
                 value={editedTodo.category || ''}
                 onChange={(e) => setEditedTodo({ ...editedTodo, category: e.target.value })}
                 label="Category"
+                sx={{ 
+                  '& .MuiSelect-select': {
+                    fontSize: isMobile ? '0.875rem' : '1rem'
+                  }
+                }}
               >
                 {categoryOptions.map(option => (
-                  <MenuItem key={option} value={option}>{option}</MenuItem>
+                  <MenuItem 
+                    key={option} 
+                    value={option}
+                    sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+                  >
+                    {option}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>
           </Stack>
         ) : (
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+          <Stack 
+            direction="row" 
+            spacing={1} 
+            alignItems="center" 
+            flexWrap="wrap" 
+            useFlexGap 
+            sx={{ 
+              mb: 2,
+              gap: 0.5,
+              '& .MuiChip-root': {
+                height: isMobile ? '24px' : '32px',
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+              }
+            }}
+          >
             <Chip
-              icon={<FlagIcon />}
+              icon={<FlagIcon sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }} />}
               label={todo.priority || 'No Priority'}
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color={getPriorityColor(todo.priority)}
             />
             
@@ -252,7 +341,7 @@ const Todo = ({
               <Chip
                 icon={<TimeIcon />}
                 label={format(new Date(todo.deadline), 'MMM dd, yyyy')}
-                size="small"
+                size={isMobile ? "small" : "medium"}
                 color="info"
               />
             )}
@@ -261,7 +350,7 @@ const Todo = ({
               <Chip
                 icon={<CategoryIcon />}
                 label={todo.category}
-                size="small"
+                size={isMobile ? "small" : "medium"}
                 color="secondary"
               />
             )}
@@ -269,7 +358,7 @@ const Todo = ({
             <Chip
               icon={<TimerIcon />}
               label="Time Tracking"
-              size="small"
+              size={isMobile ? "small" : "medium"}
               color={showTimeTracker ? "primary" : "default"}
               onClick={() => setShowTimeTracker(!showTimeTracker)}
             />
