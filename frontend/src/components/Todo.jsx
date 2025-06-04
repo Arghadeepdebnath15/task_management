@@ -28,6 +28,8 @@ import {
   ListItemSecondaryAction,
   useTheme,
   useMediaQuery,
+  Collapse,
+  CardActionArea,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -66,6 +68,7 @@ const Todo = ({
   const [editedTodo, setEditedTodo] = useState(todo);
   const [showTimeTracker, setShowTimeTracker] = useState(false);
   const [newSubtask, setNewSubtask] = useState('');
+  const [expanded, setExpanded] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -144,312 +147,358 @@ const Todo = ({
     }
   };
 
-  return (
-    <Card sx={{ 
-      mb: 2, 
-      position: 'relative',
-      transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-      '&:hover': {
-        transform: isMobile ? 'none' : 'translateY(-2px)',
-        boxShadow: isMobile ? 2 : 4,
-      },
-      opacity: todo.completed ? 0.7 : 1,
-      width: '100%',
-    }}>
-      <CardContent sx={{ 
-        p: isMobile ? 1.5 : 2,
-        '&:last-child': { pb: isMobile ? 1.5 : 2 }
-      }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start', 
-          mb: 2,
-          flexDirection: isMobile ? 'column' : 'row',
-        }}>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'flex-start', 
-            flex: 1,
-            width: '100%',
-          }}>
-            <Checkbox
-              checked={todo.completed}
-              onChange={handleStatusToggle}
-              icon={<UncheckedIcon />}
-              checkedIcon={<CheckCircleIcon />}
-              sx={{ 
-                p: isMobile ? 0.5 : 1,
-                mt: isMobile ? 0.5 : 0
-              }}
-            />
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              {editMode ? (
-                <TextField
-                  fullWidth
-                  value={editedTodo.title}
-                  onChange={(e) => setEditedTodo({ ...editedTodo, title: e.target.value })}
-                  size="small"
-                  sx={{ mb: 2 }}
-                />
-              ) : (
-                <Typography 
-                  variant={isMobile ? "subtitle1" : "h6"}
-                  component="div" 
-                  gutterBottom
-                  sx={{ 
-                    textDecoration: todo.completed ? 'line-through' : 'none',
-                    wordBreak: 'break-word',
-                    pr: isMobile ? 3 : 0
-                  }}
-                >
-                  {todo.title}
-                </Typography>
-              )}
-              
-              {editMode ? (
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  value={editedTodo.description}
-                  onChange={(e) => setEditedTodo({ ...editedTodo, description: e.target.value })}
-                  size="small"
-                />
-              ) : (
-                <Typography 
-                  variant="body2" 
-                  color="text.secondary"
-                  sx={{ 
-                    wordBreak: 'break-word',
-                    fontSize: isMobile ? '0.875rem' : '1rem'
-                  }}
-                >
-                  {todo.description}
-                </Typography>
-              )}
-            </Box>
-          </Box>
+  const handleCardClick = (event) => {
+    if (
+      event.target.closest('button') ||
+      event.target.closest('input') ||
+      event.target.closest('.MuiChip-root')
+    ) {
+      return;
+    }
+    setExpanded(!expanded);
+  };
 
-          <IconButton 
-            onClick={handleMenuClick} 
-            size="small"
+  return (
+    <Card 
+      sx={{ 
+        mb: 2,
+        position: 'relative',
+        transition: 'all 0.3s ease-in-out',
+        '&:hover': {
+          transform: isMobile ? 'none' : 'translateY(-2px)',
+          boxShadow: isMobile ? 2 : 4,
+        },
+        opacity: todo.completed ? 0.7 : 1,
+        width: isMobile ? 'calc(50% - 8px)' : '100%',
+        display: 'inline-block',
+        verticalAlign: 'top',
+        height: isMobile && !expanded ? '180px' : 'auto',
+        overflow: 'hidden',
+        cursor: isMobile ? 'pointer' : 'default',
+      }}
+    >
+      <CardActionArea 
+        onClick={isMobile ? handleCardClick : undefined}
+        sx={{
+          height: '100%',
+          '&:hover': {
+            backgroundColor: 'transparent',
+          },
+        }}
+      >
+        <CardContent 
+          sx={{ 
+            p: isMobile ? 1.5 : 2,
+            '&:last-child': { pb: isMobile ? 1.5 : 2 },
+            height: '100%',
+            overflow: isMobile && !expanded ? 'hidden' : 'visible',
+          }}
+        >
+          <Box 
             sx={{ 
-              position: isMobile ? 'absolute' : 'relative',
-              right: isMobile ? 8 : 'auto',
-              top: isMobile ? 8 : 'auto',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              mb: 2,
+              flexDirection: isMobile ? 'column' : 'row',
             }}
           >
-            <MoreVertIcon />
-          </IconButton>
-        </Box>
-
-        {editMode ? (
-          <Stack spacing={2} sx={{ mb: 2 }}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Due Date"
-                value={editedTodo.deadline ? new Date(editedTodo.deadline) : null}
-                onChange={(newValue) => setEditedTodo({ ...editedTodo, deadline: newValue })}
-                renderInput={(params) => (
-                  <TextField 
-                    {...params} 
-                    size="small"
+            <Box 
+              sx={{ 
+                display: 'flex',
+                alignItems: 'flex-start',
+                flex: 1,
+                width: '100%',
+              }}
+            >
+              <Checkbox
+                checked={todo.completed}
+                onChange={handleStatusToggle}
+                icon={<UncheckedIcon />}
+                checkedIcon={<CheckCircleIcon />}
+                sx={{ 
+                  p: isMobile ? 0.5 : 1,
+                  mt: isMobile ? 0.5 : 0,
+                }}
+              />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                {editMode ? (
+                  <TextField
                     fullWidth
+                    value={editedTodo.title}
+                    onChange={(e) => setEditedTodo({ ...editedTodo, title: e.target.value })}
+                    size="small"
+                    sx={{ mb: 2 }}
+                  />
+                ) : (
+                  <Typography 
+                    variant={isMobile ? "subtitle1" : "h6"}
+                    component="div"
+                    gutterBottom
                     sx={{ 
-                      '& .MuiInputBase-root': {
+                      textDecoration: todo.completed ? 'line-through' : 'none',
+                      wordBreak: 'break-word',
+                      pr: isMobile ? 3 : 0,
+                      fontSize: isMobile ? '0.875rem' : undefined,
+                      lineHeight: 1.2,
+                      mb: isMobile ? 0.5 : undefined,
+                    }}
+                  >
+                    {todo.title}
+                  </Typography>
+                )}
+
+                {(!isMobile || expanded || editMode) && (
+                  editMode ? (
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={2}
+                      value={editedTodo.description}
+                      onChange={(e) => setEditedTodo({ ...editedTodo, description: e.target.value })}
+                      size="small"
+                    />
+                  ) : (
+                    <Typography 
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ 
+                        wordBreak: 'break-word',
+                        fontSize: isMobile ? '0.75rem' : '0.875rem',
+                        display: '-webkit-box',
+                        WebkitLineClamp: isMobile && !expanded ? 2 : 'none',
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {todo.description}
+                    </Typography>
+                  )
+                )}
+              </Box>
+            </Box>
+
+            <IconButton 
+              onClick={handleMenuClick}
+              size="small"
+              sx={{ 
+                position: isMobile ? 'absolute' : 'relative',
+                right: isMobile ? 8 : 'auto',
+                top: isMobile ? 8 : 'auto',
+              }}
+            >
+              <MoreVertIcon />
+            </IconButton>
+          </Box>
+
+          <Collapse in={!isMobile || expanded || editMode}>
+            {editMode ? (
+              <Stack spacing={2} sx={{ mb: 2 }}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Due Date"
+                    value={editedTodo.deadline ? new Date(editedTodo.deadline) : null}
+                    onChange={(newValue) => setEditedTodo({ ...editedTodo, deadline: newValue })}
+                    renderInput={(params) => (
+                      <TextField 
+                        {...params} 
+                        size="small"
+                        fullWidth
+                        sx={{ 
+                          '& .MuiInputBase-root': {
+                            fontSize: isMobile ? '0.875rem' : '1rem'
+                          }
+                        }}
+                      />
+                    )}
+                  />
+                </LocalizationProvider>
+
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Priority</InputLabel>
+                  <Select
+                    value={editedTodo.priority || ''}
+                    onChange={(e) => setEditedTodo({ ...editedTodo, priority: e.target.value })}
+                    label="Priority"
+                    sx={{ 
+                      '& .MuiSelect-select': {
                         fontSize: isMobile ? '0.875rem' : '1rem'
                       }
                     }}
-                  />
-                )}
-              />
-            </LocalizationProvider>
+                  >
+                    {priorityOptions.map(option => (
+                      <MenuItem 
+                        key={option} 
+                        value={option}
+                        sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+                      >
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
 
-            <FormControl size="small" fullWidth>
-              <InputLabel>Priority</InputLabel>
-              <Select
-                value={editedTodo.priority || ''}
-                onChange={(e) => setEditedTodo({ ...editedTodo, priority: e.target.value })}
-                label="Priority"
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Category</InputLabel>
+                  <Select
+                    value={editedTodo.category || ''}
+                    onChange={(e) => setEditedTodo({ ...editedTodo, category: e.target.value })}
+                    label="Category"
+                    sx={{ 
+                      '& .MuiSelect-select': {
+                        fontSize: isMobile ? '0.875rem' : '1rem'
+                      }
+                    }}
+                  >
+                    {categoryOptions.map(option => (
+                      <MenuItem 
+                        key={option} 
+                        value={option}
+                        sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
+                      >
+                        {option}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+            ) : (
+              <Stack 
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
                 sx={{ 
-                  '& .MuiSelect-select': {
-                    fontSize: isMobile ? '0.875rem' : '1rem'
+                  mb: 2,
+                  gap: 0.5,
+                  '& .MuiChip-root': {
+                    height: '24px',
+                    fontSize: '0.75rem',
                   }
                 }}
               >
-                {priorityOptions.map(option => (
-                  <MenuItem 
-                    key={option} 
-                    value={option}
-                    sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
-                  >
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" fullWidth>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={editedTodo.category || ''}
-                onChange={(e) => setEditedTodo({ ...editedTodo, category: e.target.value })}
-                label="Category"
-                sx={{ 
-                  '& .MuiSelect-select': {
-                    fontSize: isMobile ? '0.875rem' : '1rem'
-                  }
-                }}
-              >
-                {categoryOptions.map(option => (
-                  <MenuItem 
-                    key={option} 
-                    value={option}
-                    sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }}
-                  >
-                    {option}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Stack>
-        ) : (
-          <Stack 
-            direction="row" 
-            spacing={1} 
-            alignItems="center" 
-            flexWrap="wrap" 
-            useFlexGap 
-            sx={{ 
-              mb: 2,
-              gap: 0.5,
-              '& .MuiChip-root': {
-                height: isMobile ? '24px' : '32px',
-                fontSize: isMobile ? '0.75rem' : '0.875rem',
-              }
-            }}
-          >
-            <Chip
-              icon={<FlagIcon sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }} />}
-              label={todo.priority || 'No Priority'}
-              size={isMobile ? "small" : "medium"}
-              color={getPriorityColor(todo.priority)}
-            />
-            
-            {todo.deadline && (
-              <Chip
-                icon={<TimeIcon />}
-                label={format(new Date(todo.deadline), 'MMM dd, yyyy')}
-                size={isMobile ? "small" : "medium"}
-                color="info"
-              />
-            )}
-            
-            {todo.category && (
-              <Chip
-                icon={<CategoryIcon />}
-                label={todo.category}
-                size={isMobile ? "small" : "medium"}
-                color="secondary"
-              />
-            )}
-
-            <Chip
-              icon={<TimerIcon />}
-              label="Time Tracking"
-              size={isMobile ? "small" : "medium"}
-              color={showTimeTracker ? "primary" : "default"}
-              onClick={() => setShowTimeTracker(!showTimeTracker)}
-            />
-          </Stack>
-        )}
-
-        {showTimeTracker && (
-          <Box sx={{ mt: 2 }}>
-            <Stopwatch 
-              taskId={todo.id} 
-              onTimeUpdate={handleTimeUpdate}
-              initialTime={todo.timeSpent || 0}
-            />
-          </Box>
-        )}
-
-        {/* Subtasks Section */}
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="subtitle2" gutterBottom>
-            Subtasks {todo.subtasks?.length > 0 && `(${todo.subtasks.filter(st => st.completed).length}/${todo.subtasks.length})`}
-          </Typography>
-          
-          {todo.subtasks?.length > 0 && (
-            <LinearProgress 
-              variant="determinate" 
-              value={calculateProgress()} 
-              sx={{ mb: 1 }} 
-            />
-          )}
-
-          <List dense>
-            {editedTodo.subtasks?.map((subtask) => (
-              <ListItem key={subtask.id} disablePadding>
-                <ListItemIcon>
-                  <Checkbox
-                    edge="start"
-                    checked={subtask.completed}
-                    onChange={() => handleSubtaskToggle(subtask.id)}
-                    disabled={!editMode}
-                  />
-                </ListItemIcon>
-                <ListItemText 
-                  primary={subtask.title}
-                  sx={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}
+                <Chip
+                  icon={<FlagIcon sx={{ fontSize: isMobile ? '0.875rem' : '1rem' }} />}
+                  label={todo.priority || 'No Priority'}
+                  size={isMobile ? "small" : "medium"}
+                  color={getPriorityColor(todo.priority)}
                 />
-                {editMode && (
-                  <ListItemSecondaryAction>
-                    <IconButton 
-                      edge="end" 
-                      size="small"
-                      onClick={() => {
-                        const updatedSubtasks = editedTodo.subtasks.filter(st => st.id !== subtask.id);
-                        setEditedTodo({ ...editedTodo, subtasks: updatedSubtasks });
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItemSecondaryAction>
+                
+                {todo.deadline && (
+                  <Chip
+                    icon={<TimeIcon />}
+                    label={format(new Date(todo.deadline), 'MMM dd, yyyy')}
+                    size={isMobile ? "small" : "medium"}
+                    color="info"
+                  />
                 )}
-              </ListItem>
-            ))}
-          </List>
+                
+                {todo.category && (
+                  <Chip
+                    icon={<CategoryIcon />}
+                    label={todo.category}
+                    size={isMobile ? "small" : "medium"}
+                    color="secondary"
+                  />
+                )}
 
-          {editMode && (
-            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <TextField
-                size="small"
-                placeholder="Add subtask"
-                value={newSubtask}
-                onChange={(e) => setNewSubtask(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
-              />
-              <Button
-                startIcon={<AddIcon />}
-                onClick={handleAddSubtask}
-                variant="outlined"
-                size="small"
-              >
-                Add
-              </Button>
+                <Chip
+                  icon={<TimerIcon />}
+                  label="Time Tracking"
+                  size={isMobile ? "small" : "medium"}
+                  color={showTimeTracker ? "primary" : "default"}
+                  onClick={() => setShowTimeTracker(!showTimeTracker)}
+                />
+              </Stack>
+            )}
+
+            {showTimeTracker && (
+              <Box sx={{ mt: 2 }}>
+                <Stopwatch 
+                  taskId={todo.id} 
+                  onTimeUpdate={handleTimeUpdate}
+                  initialTime={todo.timeSpent || 0}
+                />
+              </Box>
+            )}
+
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Subtasks {todo.subtasks?.length > 0 && `(${todo.subtasks.filter(st => st.completed).length}/${todo.subtasks.length})`}
+              </Typography>
+              
+              {todo.subtasks?.length > 0 && (
+                <LinearProgress 
+                  variant="determinate" 
+                  value={calculateProgress()} 
+                  sx={{ mb: 1 }} 
+                />
+              )}
+
+              <List dense>
+                {editedTodo.subtasks?.map((subtask) => (
+                  <ListItem key={subtask.id} disablePadding>
+                    <ListItemIcon>
+                      <Checkbox
+                        edge="start"
+                        checked={subtask.completed}
+                        onChange={() => handleSubtaskToggle(subtask.id)}
+                        disabled={!editMode}
+                      />
+                    </ListItemIcon>
+                    <ListItemText 
+                      primary={subtask.title}
+                      sx={{ textDecoration: subtask.completed ? 'line-through' : 'none' }}
+                    />
+                    {editMode && (
+                      <ListItemSecondaryAction>
+                        <IconButton 
+                          edge="end" 
+                          size="small"
+                          onClick={() => {
+                            const updatedSubtasks = editedTodo.subtasks.filter(st => st.id !== subtask.id);
+                            setEditedTodo({ ...editedTodo, subtasks: updatedSubtasks });
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    )}
+                  </ListItem>
+                ))}
+              </List>
+
+              {editMode && (
+                <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Add subtask"
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleAddSubtask()}
+                  />
+                  <Button
+                    startIcon={<AddIcon />}
+                    onClick={handleAddSubtask}
+                    variant="outlined"
+                    size="small"
+                  >
+                    Add
+                  </Button>
+                </Box>
+              )}
             </Box>
-          )}
-        </Box>
 
-        {editMode && (
-          <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-            <Button size="small" onClick={handleCancel}>Cancel</Button>
-            <Button size="small" variant="contained" onClick={handleSave}>Save</Button>
-          </Box>
-        )}
-      </CardContent>
+            {editMode && (
+              <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button size="small" onClick={handleCancel}>Cancel</Button>
+                <Button size="small" variant="contained" onClick={handleSave}>Save</Button>
+              </Box>
+            )}
+          </Collapse>
+        </CardContent>
+      </CardActionArea>
 
       <Menu
         anchorEl={anchorEl}
